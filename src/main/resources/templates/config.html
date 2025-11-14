@@ -1,0 +1,481 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${configView.systemName}">Config</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+            margin: 0;
+            padding: 40px 20px;
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            padding: 32px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            text-decoration: none;
+            color: #666;
+            font-size: 14px;
+            padding: 6px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .back-link:hover {
+            background-color: #f0f0f0;
+            border-color: #999;
+        }
+        h1 { 
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+        }
+        .version {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        section {
+            margin-bottom: 40px;
+            padding: 24px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        section:last-child {
+            margin-bottom: 0;
+        }
+        h2 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d72b8;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .param-group {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: white;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+        }
+        .param-group:last-child {
+            margin-bottom: 0;
+        }
+        .param-label {
+            display: block;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .param-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .param-input:focus {
+            outline: none;
+            border-color: #1d72b8;
+            box-shadow: 0 0 0 3px rgba(29, 114, 184, 0.1);
+        }
+        .param-input.changed {
+            background-color: #e3f2fd;
+            border-color: #64b5f6;
+        }
+        .param-select.changed {
+            background-color: #e3f2fd;
+            border-color: #64b5f6;
+        }
+        .param-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+        }
+        .param-select:focus {
+            outline: none;
+            border-color: #1d72b8;
+            box-shadow: 0 0 0 3px rgba(29, 114, 184, 0.1);
+        }
+        .start-value {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 4px 8px;
+            background: #f0f0f0;
+            border: 1px solid #d0d0d0;
+            border-radius: 3px;
+            font-size: 12px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .start-value:hover {
+            background: #e0e0e0;
+            border-color: #1d72b8;
+            color: #1d72b8;
+        }
+        .start-value span:last-child {
+            font-weight: 500;
+        }
+        .start-value-label {
+            color: #999;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        .actions { 
+            margin-top: 24px; 
+            display: flex; 
+            gap: 12px; 
+            padding-top: 24px;
+            border-top: 1px solid #e0e0e0;
+        }
+        button { 
+            padding: 12px 24px; 
+            border: 1px solid;
+            border-radius: 4px; 
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .primary { 
+            background: #1d72b8; 
+            color: #fff;
+            border-color: #1d72b8;
+        }
+        .primary:hover {
+            background: #155a94;
+            border-color: #155a94;
+        }
+        .secondary { 
+            background: #fff;
+            color: #666;
+            border-color: #d0d0d0;
+        }
+        .secondary:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+        .revert { 
+            background: #ff9800; 
+            color: #fff;
+            border-color: #ff9800;
+        }
+        .revert:hover {
+            background: #f57c00;
+            border-color: #f57c00;
+        }
+        .top-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .empty-section {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #ffcdd2;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a th:href="@{/}" class="back-link">← Назад</a>
+    <h1 th:text="${configView.systemName}">mock-name</h1>
+    <div class="version" th:if="${configView.configVersion}">
+        Версия конфига: <strong th:text="${configView.configVersion}">v1.0</strong>
+    </div>
+
+    <div th:if="${param.error}" class="error" th:text="${param.error[0]}"></div>
+
+    <!-- Кнопки действий вверху -->
+    <div class="top-actions">
+        <button class="primary" type="submit" form="configForm">Сохранить изменения</button>
+        <form th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0;">
+            <input type="hidden" name="action" value="revert"/>
+            <button class="revert" type="submit">Вернуть к стартовому</button>
+        </form>
+    </div>
+
+    <form id="configForm" th:action="@{'/configs/' + ${systemName}}" method="post">
+        <input type="hidden" name="action" value="update"/>
+
+        <!-- Delays (int значения) -->
+        <section th:if="${!configView.delays.isEmpty()}">
+            <h2>Задержки (мс)</h2>
+            
+            <!-- Массовое управление задержками -->
+            <div class="param-group" style="background: #fff3cd; border-color: #ffc107; margin-bottom: 24px;">
+                <label class="param-label" style="font-weight: 600; color: #856404;">Массовое управление задержками</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
+                    <div>
+                        <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">Установить для всех:</label>
+                        <input type="number" 
+                               id="setAllDelays" 
+                               class="param-input" 
+                               placeholder="Значение (мс)"
+                               min="0"
+                               step="1"
+                               style="margin-bottom: 0;"/>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">Добавить ко всем:</label>
+                        <input type="number" 
+                               id="addToAllDelays" 
+                               class="param-input" 
+                               placeholder="Значение (мс)"
+                               step="1"
+                               style="margin-bottom: 0;"/>
+                    </div>
+                    <div>
+                        <button type="button" 
+                                id="applyDelaysBtn" 
+                                class="primary" 
+                                style="padding: 10px 20px; white-space: nowrap;">
+                            Применить
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div th:each="delay : ${configView.delays}" class="param-group">
+                <label class="param-label" th:text="${delay.key}">delay_key</label>
+                <input type="number" 
+                       class="param-input" 
+                       th:name="'delay_' + ${delay.key}"
+                       th:value="${delay.value}"
+                       th:id="'delay_' + ${delay.key}"
+                       min="0"
+                       step="1"
+                       required/>
+                <div class="start-value" 
+                     th:data-target-id="'delay_' + ${delay.key}"
+                     th:data-value="${delay.startValue}">
+                    <span class="start-value-label">Стартовое:</span>
+                    <span th:text="${delay.startValue}">0</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- String Parameters -->
+        <section th:if="${!configView.stringParams.isEmpty()}">
+            <h2>Строковые параметры</h2>
+            <div th:each="stringParam : ${configView.stringParams}" class="param-group">
+                <label class="param-label" th:text="${stringParam.key}">param_key</label>
+                <input type="text" 
+                       class="param-input" 
+                       th:name="'string_' + ${stringParam.key}"
+                       th:value="${stringParam.value}"
+                       th:id="'string_' + ${stringParam.key}"
+                       required/>
+                <div class="start-value" 
+                     th:data-target-id="'string_' + ${stringParam.key}"
+                     th:data-value="${stringParam.startValue}">
+                    <span class="start-value-label">Стартовое:</span>
+                    <span th:text="${stringParam.startValue}">value</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logging Level -->
+        <section th:if="${configView.loggingLevel != null}">
+            <h2>Уровень логирования</h2>
+            <div class="param-group">
+                <label class="param-label">Уровень логирования</label>
+                <select class="param-select" name="loggingLv" id="loggingLv" required>
+                    <option value="ERROR" th:selected="${configView.loggingLevel.value == 'ERROR'}">ERROR</option>
+                    <option value="WARN" th:selected="${configView.loggingLevel.value == 'WARN'}">WARN</option>
+                    <option value="INFO" th:selected="${configView.loggingLevel.value == 'INFO'}">INFO</option>
+                    <option value="DEBUG" th:selected="${configView.loggingLevel.value == 'DEBUG'}">DEBUG</option>
+                </select>
+                <div class="start-value" 
+                     data-target-id="loggingLv"
+                     th:data-value="${configView.loggingLevel.startValue}">
+                    <span class="start-value-label">Стартовое:</span>
+                    <span th:text="${configView.loggingLevel.startValue}">ERROR</span>
+                </div>
+            </div>
+        </section>
+    </form>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Сохраняем исходные значения всех полей
+        const originalValues = new Map();
+        const allInputs = document.querySelectorAll('input[type="number"], input[type="text"], select');
+        
+        allInputs.forEach(function(input) {
+            originalValues.set(input.id, input.value);
+        });
+
+        // Функция для проверки и обновления стиля измененных полей
+        function updateChangedStyle(input) {
+            const originalValue = originalValues.get(input.id);
+            const currentValue = input.value;
+            
+            if (originalValue !== currentValue) {
+                input.classList.add('changed');
+            } else {
+                input.classList.remove('changed');
+            }
+        }
+
+        // Отслеживание изменений в полях
+        allInputs.forEach(function(input) {
+            input.addEventListener('input', function() {
+                updateChangedStyle(this);
+            });
+            
+            input.addEventListener('change', function() {
+                updateChangedStyle(this);
+            });
+        });
+
+        // Проверяем изменения при загрузке (на случай если значения уже изменены)
+        allInputs.forEach(function(input) {
+            updateChangedStyle(input);
+        });
+
+        // Если страница загружена после успешного сохранения, обновляем исходные значения
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('saved') === 'true') {
+            // Обновляем исходные значения после сохранения
+            allInputs.forEach(function(input) {
+                originalValues.set(input.id, input.value);
+                input.classList.remove('changed');
+            });
+            // Убираем параметр из URL
+            urlParams.delete('saved');
+            const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // Обработка клика по стартовым значениям
+        const startValues = document.querySelectorAll('.start-value');
+        startValues.forEach(function(element) {
+            element.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target-id');
+                const value = this.getAttribute('data-value');
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    targetElement.value = value;
+                    updateChangedStyle(targetElement);
+                    // Добавляем визуальную обратную связь
+                    targetElement.style.backgroundColor = '#e8f4fd';
+                    setTimeout(function() {
+                        targetElement.style.backgroundColor = '';
+                    }, 300);
+                }
+            });
+        });
+
+        // Обработка массового управления задержками
+        const applyDelaysBtn = document.getElementById('applyDelaysBtn');
+        const setAllDelaysInput = document.getElementById('setAllDelays');
+        const addToAllDelaysInput = document.getElementById('addToAllDelays');
+
+        if (applyDelaysBtn) {
+            applyDelaysBtn.addEventListener('click', function() {
+                const setAllValue = setAllDelaysInput.value.trim();
+                const addValue = addToAllDelaysInput.value.trim();
+
+                // Получаем все поля задержек
+                const delayInputs = document.querySelectorAll('input[id^="delay_"]');
+
+                if (delayInputs.length === 0) {
+                    alert('Нет полей задержек для обновления');
+                    return;
+                }
+
+                let hasChanges = false;
+
+                if (setAllValue !== '') {
+                    // Устанавливаем одно значение для всех
+                    const value = parseInt(setAllValue);
+                    if (!isNaN(value) && value >= 0) {
+                        delayInputs.forEach(function(input) {
+                            input.value = value;
+                            updateChangedStyle(input);
+                            input.style.backgroundColor = '#e8f4fd';
+                            hasChanges = true;
+                        });
+                        // Очищаем поле после применения
+                        setAllDelaysInput.value = '';
+                    } else {
+                        alert('Введите корректное неотрицательное число');
+                        return;
+                    }
+                } else if (addValue !== '') {
+                    // Добавляем значение ко всем
+                    const add = parseInt(addValue);
+                    if (!isNaN(add)) {
+                        delayInputs.forEach(function(input) {
+                            const currentValue = parseInt(input.value) || 0;
+                            const newValue = Math.max(0, currentValue + add);
+                            input.value = newValue;
+                            updateChangedStyle(input);
+                            input.style.backgroundColor = '#e8f4fd';
+                            hasChanges = true;
+                        });
+                        // Очищаем поле после применения
+                        addToAllDelaysInput.value = '';
+                    } else {
+                        alert('Введите корректное число');
+                        return;
+                    }
+                } else {
+                    alert('Введите значение в одно из полей');
+                    return;
+                }
+
+                if (hasChanges) {
+                    // Убираем временную подсветку через 500мс (но оставляем класс changed)
+                    setTimeout(function() {
+                        delayInputs.forEach(function(input) {
+                            input.style.backgroundColor = '';
+                        });
+                    }, 500);
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>
