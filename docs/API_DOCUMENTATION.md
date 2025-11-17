@@ -311,6 +311,226 @@ curl -X POST http://localhost:8080/api/configs \
 
 ---
 
+### 3. Планирование отложенного обновления конфигурации
+
+Планирует обновление конфигурации на указанное время в будущем.
+
+**Эндпоинт:** `POST /api/configs/schedule`
+
+**Описание:**
+- Позволяет запланировать обновление конфигурации на определенное время
+- Обновление будет применено автоматически в указанное время
+- Можно указать комментарий для описания изменения
+- Поддерживается несколько запланированных обновлений для одной системы
+
+**Запрос:**
+
+```json
+{
+  "SystemName": "auth-mock",
+  "scheduledTime": "14:30:00 25-12-2024",
+  "config": {
+    "delays": {
+      "loginDelayMs": "2000",
+      "tokenDelayMs": "1000"
+    },
+    "stringParams": {
+      "mode": "test",
+      "environment": "production"
+    },
+    "loggingLv": "INFO"
+  },
+  "comment": "Увеличение задержек для тестирования"
+}
+```
+
+**Поля запроса:**
+- `SystemName` (string, обязательное) - название заглушки
+- `scheduledTime` (string, обязательное) - дата и время в формате `HH:mm:ss dd-MM-yyyy` (например, "14:30:00 25-12-2024")
+- `config` (object, обязательное) - конфигурация, которая будет применена
+- `comment` (string, необязательное) - комментарий к запланированному обновлению
+
+**Ответ:**
+
+```json
+{
+  "success": true,
+  "message": "Обновление успешно запланировано",
+  "updateId": "550e8400-e29b-41d4-a716-446655440000",
+  "scheduledTime": "14:30:00 25-12-2024"
+}
+```
+
+**Поля ответа:**
+- `success` (boolean) - успешно ли запланировано обновление
+- `message` (string) - сообщение о результате
+- `updateId` (string) - уникальный идентификатор запланированного обновления
+- `scheduledTime` (string) - запланированное время обновления
+
+**Примеры запросов:**
+
+**cURL:**
+```bash
+curl -X POST http://localhost:8080/api/configs/schedule \
+  -H "Content-Type: application/json" \
+  -d '{
+    "SystemName": "auth-mock",
+    "scheduledTime": "14:30:00 25-12-2024",
+    "config": {
+      "delays": {
+        "loginDelayMs": "2000",
+        "tokenDelayMs": "1000"
+      },
+      "stringParams": {
+        "mode": "test"
+      },
+      "loggingLv": "INFO"
+    },
+    "comment": "Увеличение задержек"
+  }'
+```
+
+**PowerShell:**
+```powershell
+$body = @{
+    SystemName = "auth-mock"
+    scheduledTime = "14:30:00 25-12-2024"
+    config = @{
+        delays = @{
+            loginDelayMs = "2000"
+            tokenDelayMs = "1000"
+        }
+        stringParams = @{
+            mode = "test"
+        }
+        loggingLv = "INFO"
+    }
+    comment = "Увеличение задержек"
+} | ConvertTo-Json -Depth 10
+
+$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs/schedule" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $body
+
+$response | ConvertTo-Json
+```
+
+**Ошибки:**
+- `400 Bad Request` - неверный формат даты или дата в прошлом
+- `500 Internal Server Error` - внутренняя ошибка сервера
+
+---
+
+### 4. Получение списка запланированных обновлений
+
+Возвращает список всех запланированных обновлений для указанной системы.
+
+**Эндпоинт:** `GET /api/configs/{systemName}/scheduled`
+
+**Параметры:**
+- `systemName` (path) - название заглушки
+
+**Описание:**
+- Возвращает все запланированные обновления для указанной системы
+- Обновления отсортированы по времени выполнения (от ближайших к дальним)
+
+**Ответ:**
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "systemName": "auth-mock",
+    "scheduledTime": "14:30:00 25-12-2024",
+    "comment": "Увеличение задержек",
+    "createdAt": "10:15:00 20-12-2024"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "systemName": "auth-mock",
+    "scheduledTime": "18:00:00 25-12-2024",
+    "comment": null,
+    "createdAt": "11:20:00 20-12-2024"
+  }
+]
+```
+
+**Поля ответа:**
+- `id` (string) - уникальный идентификатор обновления
+- `systemName` (string) - название системы
+- `scheduledTime` (string) - запланированное время обновления
+- `comment` (string, nullable) - комментарий к обновлению
+- `createdAt` (string) - время создания запланированного обновления
+
+**Примеры запросов:**
+
+**cURL:**
+```bash
+curl -X GET http://localhost:8080/api/configs/auth-mock/scheduled
+```
+
+**PowerShell:**
+```powershell
+$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs/auth-mock/scheduled" `
+    -Method Get
+
+$response | ConvertTo-Json
+```
+
+---
+
+### 5. Отмена запланированного обновления
+
+Отменяет запланированное обновление по его идентификатору.
+
+**Эндпоинт:** `DELETE /api/configs/scheduled/{updateId}`
+
+**Параметры:**
+- `updateId` (path) - уникальный идентификатор запланированного обновления
+
+**Описание:**
+- Отменяет указанное запланированное обновление
+- Обновление удаляется из списка и не будет выполнено
+
+**Ответ:**
+
+```json
+{
+  "success": true,
+  "message": "Запланированное обновление отменено",
+  "updateId": "550e8400-e29b-41d4-a716-446655440000",
+  "scheduledTime": null
+}
+```
+
+**Поля ответа:**
+- `success` (boolean) - успешно ли отменено обновление
+- `message` (string) - сообщение о результате
+- `updateId` (string) - идентификатор отмененного обновления
+- `scheduledTime` (string, nullable) - всегда null для отмененных обновлений
+
+**Примеры запросов:**
+
+**cURL:**
+```bash
+curl -X DELETE http://localhost:8080/api/configs/scheduled/550e8400-e29b-41d4-a716-446655440000
+```
+
+**PowerShell:**
+```powershell
+$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs/scheduled/550e8400-e29b-41d4-a716-446655440000" `
+    -Method Delete
+
+$response | ConvertTo-Json
+```
+
+**Ошибки:**
+- `404 Not Found` - обновление с указанным ID не найдено
+- `500 Internal Server Error` - внутренняя ошибка сервера
+
+---
+
 ## Веб-интерфейс (Web UI)
 
 ### 1. Главная страница
@@ -405,6 +625,63 @@ delay_loginDelayMs=2000&delay_tokenDelayMs=1000&string_mode=test&loggingLv=INFO
 **Пример:**
 ```
 POST /configs/auth-mock?action=revert
+```
+
+---
+
+### 5. Планирование отложенного обновления (Web UI)
+
+Планирует обновление конфигурации через веб-форму.
+
+**Эндпоинт:** `POST /configs/{systemName}?action=schedule`
+
+**Параметры:**
+- `systemName` (path) - название заглушки (URL-encoded)
+- `action=schedule` (query) - действие планирования
+
+**Форма:**
+- `scheduledDateTime` (string, обязательное) - дата и время в формате `HH:mm:ss DD-MM-YYYY` (например, "14:30:00 25-12-2024")
+- `scheduleComment` (string, необязательное) - комментарий к обновлению
+- `delay_{key}` - значения задержек (например, `delay_loginDelayMs=2000`)
+- `string_{key}` - строковые параметры (например, `string_mode=test`)
+- `loggingLv` - уровень логирования (ERROR, WARN, INFO, DEBUG)
+
+**Описание:**
+- Принимает данные из формы
+- Планирует обновление конфига на указанное время
+- Перенаправляет на страницу конфига
+
+**Пример:**
+```
+POST /configs/auth-mock?action=schedule
+Content-Type: application/x-www-form-urlencoded
+
+scheduledDateTime=14:30:00 25-12-2024&scheduleComment=Увеличение задержек&delay_loginDelayMs=2000&delay_tokenDelayMs=1000&string_mode=test&loggingLv=INFO
+```
+
+---
+
+### 6. Отмена запланированного обновления (Web UI)
+
+Отменяет запланированное обновление через веб-интерфейс.
+
+**Эндпоинт:** `POST /configs/{systemName}?action=cancelSchedule`
+
+**Параметры:**
+- `systemName` (path) - название заглушки (URL-encoded)
+- `action=cancelSchedule` (query) - действие отмены
+- `updateId` (form parameter) - идентификатор запланированного обновления
+
+**Описание:**
+- Отменяет указанное запланированное обновление
+- Перенаправляет на страницу конфига
+
+**Пример:**
+```
+POST /configs/auth-mock?action=cancelSchedule
+Content-Type: application/x-www-form-urlencoded
+
+updateId=550e8400-e29b-41d4-a716-446655440000
 ```
 
 ---

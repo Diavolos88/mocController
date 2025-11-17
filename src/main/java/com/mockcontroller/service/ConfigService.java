@@ -381,4 +381,41 @@ public class ConfigService {
         stored.setUpdatedAt(Instant.now());
         persist(stored);
     }
+
+    public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, String loggingLv) {
+        ObjectNode newConfig = objectMapper.createObjectNode();
+        
+        // Создаем delays
+        ObjectNode delaysNode = objectMapper.createObjectNode();
+        if (delays != null) {
+            delays.forEach((key, value) -> {
+                if (value != null && !value.isEmpty()) {
+                    try {
+                        delaysNode.put(key, Integer.parseInt(value));
+                    } catch (NumberFormatException e) {
+                        delaysNode.put(key, value); // fallback
+                    }
+                }
+            });
+        }
+        newConfig.set("delays", delaysNode);
+        
+        // Создаем stringParams
+        ObjectNode stringParamsNode = objectMapper.createObjectNode();
+        if (stringParams != null) {
+            stringParams.forEach((key, value) -> {
+                if (value != null) {
+                    stringParamsNode.put(key, value);
+                }
+            });
+        }
+        newConfig.set("stringParams", stringParamsNode);
+        
+        // Добавляем loggingLv
+        if (loggingLv != null && !loggingLv.isEmpty()) {
+            newConfig.put("loggingLv", loggingLv);
+        }
+        
+        return newConfig;
+    }
 }

@@ -192,6 +192,15 @@
             background: #f57c00;
             border-color: #f57c00;
         }
+        .schedule { 
+            background: #9c27b0; 
+            color: #fff;
+            border-color: #9c27b0;
+        }
+        .schedule:hover {
+            background: #7b1fa2;
+            border-color: #7b1fa2;
+        }
         .top-actions {
             display: flex;
             gap: 12px;
@@ -232,6 +241,56 @@
             <input type="hidden" name="action" value="revert"/>
             <button class="revert" type="submit">Вернуть к стартовому</button>
         </form>
+        <form id="scheduleForm" th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0; display: flex; gap: 8px; align-items: flex-start;">
+            <input type="hidden" name="action" value="schedule"/>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <input type="text" 
+                       name="scheduledDateTime" 
+                       id="scheduledDateTime" 
+                       placeholder="hh:mm:ss DD-MM-YYYY" 
+                       pattern="\d{2}:\d{2}:\d{2} \d{2}-\d{2}-\d{4}"
+                       maxlength="19"
+                       style="padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 14px; width: 180px;"
+                       title="Введите только цифры в формате: hh:mm:ss DD-MM-YYYY"/>
+                <div style="font-size: 11px; color: #666; padding: 0 4px;">
+                    Формат: <strong style="color: #1d72b8;">hh:mm:ss DD-MM-YYYY</strong> (только цифры)
+                </div>
+            </div>
+            <button class="schedule" type="submit" style="margin-top: 0;">Отложенное сохранение</button>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <input type="text" 
+                       name="scheduleComment" 
+                       id="scheduleComment" 
+                       placeholder="Комментарий (необязательно)" 
+                       maxlength="50"
+                       style="padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 14px; width: 200px;"
+                       title="Краткое описание запланированного изменения"/>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Информация о запланированных обновлениях -->
+    <div th:if="${scheduledUpdates != null && !scheduledUpdates.isEmpty()}" style="margin-top: 16px;">
+        <div style="padding: 12px; background: #e3f2fd; border: 1px solid #64b5f6; border-radius: 4px; color: #1976d2;">
+            <strong style="display: block; margin-bottom: 12px;">Запланированные обновления:</strong>
+            <div th:each="update : ${scheduledUpdates}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 8px; background: white; border-radius: 6px; border: 1px solid #90caf9; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; gap: 24px; flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 14px; color: #666; font-weight: 500;">Дата и время:</span>
+                        <span style="font-size: 15px; color: #1976d2; font-weight: 600;" th:text="${formattedScheduledTimes[update.id]}"></span>
+                    </div>
+                    <div th:if="${update.comment != null && !update.comment.isEmpty()}" style="display: flex; align-items: center; gap: 8px; padding-left: 24px; border-left: 2px solid #e3f2fd;">
+                        <span style="font-size: 14px; color: #666; font-weight: 500;">Комментарий:</span>
+                        <span style="font-size: 15px; color: #333; font-weight: 500; font-style: italic;" th:text="${update.comment}"></span>
+                    </div>
+                </div>
+                <form th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0; margin-left: 16px;">
+                    <input type="hidden" name="action" value="cancelSchedule"/>
+                    <input type="hidden" name="updateId" th:value="${update.id}"/>
+                    <button type="submit" style="padding: 6px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;" onmouseover="this.style.background='#d32f2f'" onmouseout="this.style.background='#f44336'">Отменить</button>
+                </form>
+            </div>
+        </div>
     </div>
 
     <form id="configForm" th:action="@{'/configs/' + ${systemName}}" method="post">
@@ -472,6 +531,151 @@
                             input.style.backgroundColor = '';
                         });
                     }, 500);
+                }
+            });
+        }
+
+        // Маска ввода для поля даты и времени
+        const scheduledDateTimeInput = document.getElementById('scheduledDateTime');
+        if (scheduledDateTimeInput) {
+            function formatDateTime(value) {
+                // Удаляем все нецифровые символы
+                let digits = value.replace(/\D/g, '');
+                
+                // Ограничиваем до 14 цифр
+                if (digits.length > 14) {
+                    digits = digits.substring(0, 14);
+                }
+                
+                // Форматируем с разделителями: hh:mm:ss DD-MM-YYYY
+                let formatted = '';
+                for (let i = 0; i < digits.length; i++) {
+                    if (i === 2 || i === 4) {
+                        formatted += ':';
+                    } else if (i === 6) {
+                        formatted += ' ';
+                    } else if (i === 8 || i === 10) {
+                        formatted += '-';
+                    }
+                    formatted += digits[i];
+                }
+                
+                return formatted;
+            }
+            
+            scheduledDateTimeInput.addEventListener('input', function(e) {
+                const cursorPos = this.selectionStart;
+                const oldValue = this.value;
+                const oldDigits = oldValue.replace(/\D/g, '');
+                
+                // Вычисляем позицию курсора относительно цифр в старом значении
+                const digitsBeforeCursor = oldValue.substring(0, cursorPos).replace(/\D/g, '').length;
+                
+                const newValue = formatDateTime(oldValue);
+                const newDigits = newValue.replace(/\D/g, '');
+                
+                this.value = newValue;
+                
+                // Находим новую позицию курсора после форматирования
+                let newCursorPos = 0;
+                let digitsCount = 0;
+                for (let i = 0; i < newValue.length; i++) {
+                    if (/\d/.test(newValue[i])) {
+                        digitsCount++;
+                    }
+                    if (digitsCount === digitsBeforeCursor) {
+                        newCursorPos = i + 1;
+                        // Если следующая позиция - разделитель, перемещаем курсор вперед
+                        if (newDigits.length > oldDigits.length && newValue[newCursorPos] && !/\d/.test(newValue[newCursorPos])) {
+                            newCursorPos++;
+                        }
+                        break;
+                    }
+                }
+                
+                // Если не нашли позицию (все цифры введены), ставим курсор в конец
+                if (digitsCount < digitsBeforeCursor) {
+                    newCursorPos = newValue.length;
+                }
+                
+                this.setSelectionRange(newCursorPos, newCursorPos);
+            });
+            
+            // Предотвращаем ввод нецифровых символов (кроме специальных клавиш)
+            scheduledDateTimeInput.addEventListener('keydown', function(e) {
+                // Разрешаем специальные клавиши
+                const allowedKeys = [
+                    'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+                    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                    'Home', 'End'
+                ];
+                
+                if (allowedKeys.includes(e.key)) {
+                    return;
+                }
+                
+                // Разрешаем Ctrl/Cmd комбинации
+                if (e.ctrlKey || e.metaKey) {
+                    if (['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
+                        return;
+                    }
+                }
+                
+                // Разрешаем только цифры
+                if (!/\d/.test(e.key)) {
+                    e.preventDefault();
+                }
+            });
+            
+            // Обработка вставки (paste)
+            scheduledDateTimeInput.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                const digitsOnly = pastedText.replace(/\D/g, '').substring(0, 14);
+                
+                if (digitsOnly.length > 0) {
+                    // Заменяем текущее значение на отформатированное из вставленных цифр
+                    this.value = formatDateTime(digitsOnly);
+                    // Устанавливаем курсор в конец
+                    this.setSelectionRange(this.value.length, this.value.length);
+                }
+            });
+        }
+
+        // Обработка формы отложенного сохранения
+        const scheduleForm = document.getElementById('scheduleForm');
+        if (scheduleForm) {
+            scheduleForm.addEventListener('submit', function(e) {
+                const scheduledDateTime = document.getElementById('scheduledDateTime').value.trim();
+                if (!scheduledDateTime) {
+                    e.preventDefault();
+                    alert('Введите дату и время в формате hh:mm:ss DD-MM-YYYY');
+                    return false;
+                }
+
+                // Копируем все данные из configForm в scheduleForm
+                const configForm = document.getElementById('configForm');
+                if (configForm) {
+                    const configFormData = new FormData(configForm);
+                    const scheduleFormData = new FormData(scheduleForm);
+                    
+                    // Копируем все поля из configForm (кроме action)
+                    for (const [key, value] of configFormData.entries()) {
+                        if (key !== 'action') {
+                            scheduleFormData.append(key, value);
+                        }
+                    }
+                    
+                    // Создаем скрытые поля для всех параметров
+                    for (const [key, value] of configFormData.entries()) {
+                        if (key !== 'action') {
+                            const hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = key;
+                            hiddenInput.value = value;
+                            scheduleForm.appendChild(hiddenInput);
+                        }
+                    }
                 }
             });
         }
