@@ -35,3 +35,8 @@ POST http://localhost:8080/api/configs
 - [API Документация](docs/API_DOCUMENTATION.md) - полное описание REST API и веб-интерфейса с примерами
 - [API Быстрая справка](docs/API_QUICK_REFERENCE.md) - краткая шпаргалка по эндпоинтам
 - [Проект](PROJECT_SUMMARY.md) - общее описание проекта
+
+## Интеграция
+
+Пример реализации заглушки с интеграцией к MockController:
+- [MocConnectToMockController](https://github.com/Diavolos88/MocConnectToMockController) - библиотека для подключения Spring Boot заглушек к MockController

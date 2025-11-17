@@ -224,3 +224,10 @@ curl -X DELETE http://localhost:8080/api/configs/scheduled/550e8400-e29b-41d4-a7
 
 **Уровни логирования:** ERROR, WARN, INFO, DEBUG
 
+---
+
+## Пример интеграции
+
+Пример реализации заглушки с полной интеграцией к MockController:
+- [MocConnectToMockController](https://github.com/Diavolos88/MocConnectToMockController) - библиотека для подключения Spring Boot заглушек к MockController
+

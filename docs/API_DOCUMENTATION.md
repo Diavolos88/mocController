@@ -917,3 +917,8 @@ POST /api/configs/checkUpdate
 - Версия хранится отдельно от конфига в поле `version` объекта `StoredConfig`
 - Конфиг не содержит поля "Config version" - версия управляется только сервисом
 
+## Пример интеграции
+
+Пример реализации заглушки с полной интеграцией к MockController:
+- [MocConnectToMockController](https://github.com/Diavolos88/MocConnectToMockController) - библиотека для подключения Spring Boot заглушек к MockController с автоматической синхронизацией конфигурации
+
