@@ -38,6 +38,37 @@ public class ConfigApiController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{systemName}/scheduled")
+    public ResponseEntity<List<ScheduledUpdateInfo>> getScheduledUpdates(@PathVariable String systemName) {
+        try {
+            List<ScheduledConfigUpdate> updates = scheduledConfigService.getScheduledUpdates(systemName);
+            List<ScheduledUpdateInfo> result = updates.stream()
+                .map(update -> new ScheduledUpdateInfo(
+                    update,
+                    update.getScheduledTime().format(DATE_TIME_FORMATTER),
+                    update.getCreatedAt() != null ? update.getCreatedAt().format(DATE_TIME_FORMATTER) : null
+                ))
+                .collect(Collectors.toList());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/{systemName}")
+    public ResponseEntity<ConfigResponse> getConfig(
+            @PathVariable String systemName,
+            @RequestParam(required = false) String version) {
+        try {
+            ConfigResponse response = configService.getConfig(systemName, version);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @PostMapping("/schedule")
     public ResponseEntity<ScheduleUpdateResponse> scheduleUpdate(@RequestBody ScheduleUpdateRequest request) {
         try {
@@ -79,23 +110,6 @@ public class ConfigApiController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 new ScheduleUpdateResponse(false, "Ошибка: " + e.getMessage(), null, null)
             );
-        }
-    }
-
-    @GetMapping("/{systemName}/scheduled")
-    public ResponseEntity<List<ScheduledUpdateInfo>> getScheduledUpdates(@PathVariable String systemName) {
-        try {
-            List<ScheduledConfigUpdate> updates = scheduledConfigService.getScheduledUpdates(systemName);
-            List<ScheduledUpdateInfo> result = updates.stream()
-                .map(update -> new ScheduledUpdateInfo(
-                    update,
-                    update.getScheduledTime().format(DATE_TIME_FORMATTER),
-                    update.getCreatedAt() != null ? update.getCreatedAt().format(DATE_TIME_FORMATTER) : null
-                ))
-                .collect(Collectors.toList());
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

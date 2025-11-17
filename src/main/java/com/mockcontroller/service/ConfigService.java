@@ -9,6 +9,7 @@ import com.mockcontroller.dto.ConfigViewDto;
 import com.mockcontroller.model.CheckUpdateRequest;
 import com.mockcontroller.model.CheckUpdateResponse;
 import com.mockcontroller.model.ConfigRequest;
+import com.mockcontroller.model.ConfigResponse;
 import com.mockcontroller.model.ConfigSyncResponse;
 import com.mockcontroller.model.ConfigSyncResponse.SyncStatus;
 import com.mockcontroller.model.StoredConfig;
@@ -158,6 +159,44 @@ public class ConfigService {
 
         return new ConfigSyncResponse(SyncStatus.NO_CHANGES,
                 "No changes", "v" + current.getVersion());
+    }
+
+    public ConfigResponse getConfig(String systemName, String version) {
+        String sanitizedName = sanitize(systemName);
+        StoredConfig stored = configs.get(sanitizedName);
+        
+        if (stored == null) {
+            throw new IllegalArgumentException("Config not found: " + systemName);
+        }
+        
+        int requestedVersion = parseVersion(version);
+        int currentVersion = stored.getVersion();
+        
+        JsonNode configToReturn;
+        String versionToReturn;
+        
+        // Если версия не указана или указана текущая - возвращаем текущий конфиг
+        if (version == null || version.isEmpty() || requestedVersion == currentVersion) {
+            configToReturn = stored.getCurrentConfig();
+            versionToReturn = "v" + currentVersion;
+        } 
+        // Если запрошена версия 1 - возвращаем стартовый конфиг
+        else if (requestedVersion == 1) {
+            configToReturn = stored.getStartConfig();
+            versionToReturn = "v1";
+        }
+        // Если запрошена несуществующая версия - возвращаем текущий конфиг с предупреждением
+        else {
+            configToReturn = stored.getCurrentConfig();
+            versionToReturn = "v" + currentVersion;
+        }
+        
+        return new ConfigResponse(
+            stored.getSystemName(),
+            versionToReturn,
+            configToReturn,
+            stored.getUpdatedAt().toString()
+        );
     }
 
     private int parseVersion(String versionStr) {

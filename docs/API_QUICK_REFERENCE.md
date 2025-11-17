@@ -78,6 +78,42 @@ curl -X POST http://localhost:8080/api/configs \
 
 ---
 
+### Получение конфигурации
+```bash
+GET /api/configs/{systemName}?version=v1
+```
+
+**cURL (текущая версия):**
+```bash
+curl -X GET http://localhost:8080/api/configs/auth-mock
+```
+
+**cURL (конкретная версия):**
+```bash
+curl -X GET "http://localhost:8080/api/configs/auth-mock?version=v1"
+```
+
+**Ответ:**
+```json
+{
+  "SystemName": "auth-mock",
+  "version": "v2",
+  "config": {
+    "delays": {
+      "loginDelayMs": "2000",
+      "tokenDelayMs": "1000"
+    },
+    "stringParams": {
+      "mode": "test"
+    },
+    "loggingLv": "INFO"
+  },
+  "updatedAt": "2024-12-20T10:15:30Z"
+}
+```
+
+---
+
 ### Планирование отложенного обновления
 ```bash
 POST /api/configs/schedule

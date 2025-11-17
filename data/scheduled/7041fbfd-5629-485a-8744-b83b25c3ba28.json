@@ -1,0 +1,1 @@
+{"id":"7041fbfd-5629-485a-8744-b83b25c3ba28","systemName":"auth-mock","newConfig":{"delays":{"loginDelayMs":1000,"tokenDelayMs":1000},"stringParams":{"mode":"normal","environment":"test"},"loggingLv":"ERROR"},"scheduledTime":"2026-10-10T11:10:10","createdAt":"2025-11-17T19:59:22.9601705","comment":null}
