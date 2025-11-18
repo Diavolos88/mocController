@@ -193,20 +193,60 @@
             border-color: #f57c00;
         }
         .schedule { 
-            background: #9c27b0; 
+            background: #1d72b8; 
             color: #fff;
-            border-color: #9c27b0;
+            border-color: #1d72b8;
         }
         .schedule:hover {
-            background: #7b1fa2;
-            border-color: #7b1fa2;
+            background: #155a94;
+            border-color: #155a94;
         }
         .top-actions {
             display: flex;
+            flex-direction: column;
             gap: 12px;
             margin-bottom: 24px;
             padding-bottom: 20px;
             border-bottom: 1px solid #e0e0e0;
+        }
+        .top-actions-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .top-actions-row > button,
+        .top-actions-row > form > button {
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            height: 44px;
+        }
+        .top-actions-row > button.save-button {
+            flex: 0.5;
+        }
+        .top-actions-row > form {
+            flex: 1;
+            min-width: 0;
+        }
+        .schedule-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .schedule-row > button {
+            flex: 0 0 auto;
+            height: 44px;
+            white-space: nowrap;
+        }
+        .schedule-inputs {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            flex: 1;
+        }
+        .schedule-inputs > div {
+            flex: 1;
+            min-width: 0;
         }
         .empty-section {
             color: #999;
@@ -222,6 +262,14 @@
             margin-bottom: 20px;
             border: 1px solid #ffcdd2;
         }
+        .info {
+            color: #1976d2;
+            background: #e3f2fd;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #90caf9;
+        }
     </style>
 </head>
 <body>
@@ -233,38 +281,45 @@
     </div>
 
     <div th:if="${param.error}" class="error" th:text="${param.error[0]}"></div>
+    <div th:if="${param.info}" class="info" th:text="${param.info[0]}"></div>
 
     <!-- Кнопки действий вверху -->
     <div class="top-actions">
-        <button class="primary" type="submit" form="configForm">Сохранить изменения</button>
-        <form th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0;">
-            <input type="hidden" name="action" value="revert"/>
-            <button class="revert" type="submit">Вернуть к стартовому</button>
-        </form>
-        <form id="scheduleForm" th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0; display: flex; gap: 8px; align-items: flex-start;">
+        <div class="top-actions-row">
+            <button class="primary save-button" type="submit" form="configForm">Сохранить изменения</button>
+            <form th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0;">
+                <input type="hidden" name="action" value="revert"/>
+                <button class="revert" type="submit">Вернуть к стартовому</button>
+            </form>
+        </div>
+        <form id="scheduleForm" th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0;">
             <input type="hidden" name="action" value="schedule"/>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <input type="text" 
-                       name="scheduledDateTime" 
-                       id="scheduledDateTime" 
-                       placeholder="hh:mm:ss DD-MM-YYYY" 
-                       pattern="\d{2}:\d{2}:\d{2} \d{2}-\d{2}-\d{4}"
-                       maxlength="19"
-                       style="padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 14px; width: 180px;"
-                       title="Введите только цифры в формате: hh:mm:ss DD-MM-YYYY"/>
-                <div style="font-size: 11px; color: #666; padding: 0 4px;">
-                    Формат: <strong style="color: #1d72b8;">hh:mm:ss DD-MM-YYYY</strong> (только цифры)
+            <div class="schedule-row">
+                <button class="schedule" type="submit">Отложенное сохранение</button>
+                <div class="schedule-inputs">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <input type="text" 
+                               name="scheduledDateTime" 
+                               id="scheduledDateTime" 
+                               placeholder="hh:mm:ss DD-MM-YYYY" 
+                               pattern="\d{2}:\d{2}:\d{2} \d{2}-\d{2}-\d{4}"
+                               maxlength="19"
+                               style="padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 14px;"
+                               title="Введите только цифры в формате: hh:mm:ss DD-MM-YYYY"/>
+                        <div style="font-size: 11px; color: #666; padding: 0 4px;">
+                            Формат: <strong style="color: #1d72b8;">hh:mm:ss DD-MM-YYYY</strong> (только цифры)
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <input type="text" 
+                               name="scheduleComment" 
+                               id="scheduleComment" 
+                               placeholder="Комментарий (необязательно)" 
+                               maxlength="50"
+                               style="padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 14px;"
+                               title="Краткое описание запланированного изменения"/>
+                    </div>
                 </div>
-            </div>
-            <button class="schedule" type="submit" style="margin-top: 0;">Отложенное сохранение</button>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <input type="text" 
-                       name="scheduleComment" 
-                       id="scheduleComment" 
-                       placeholder="Комментарий (необязательно)" 
-                       maxlength="50"
-                       style="padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 14px; width: 200px;"
-                       title="Краткое описание запланированного изменения"/>
             </div>
         </form>
     </div>
@@ -272,7 +327,16 @@
     <!-- Информация о запланированных обновлениях -->
     <div th:if="${scheduledUpdates != null && !scheduledUpdates.isEmpty()}" style="margin-top: 16px;">
         <div style="padding: 12px; background: #e3f2fd; border: 1px solid #64b5f6; border-radius: 4px; color: #1976d2;">
-            <strong style="display: block; margin-bottom: 12px;">Запланированные обновления:</strong>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <strong>Запланированные обновления:</strong>
+                <form th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0;">
+                    <input type="hidden" name="action" value="clearAllScheduled"/>
+                    <button type="submit" style="padding: 4px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;" 
+                            onclick="return confirm('Удалить все запланированные обновления для этой системы?');">
+                        Очистить все
+                    </button>
+                </form>
+            </div>
             <div th:each="update : ${scheduledUpdates}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 8px; background: white; border-radius: 6px; border: 1px solid #90caf9; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                 <div style="display: flex; align-items: center; gap: 24px; flex: 1;">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -326,7 +390,7 @@
                     <div>
                         <button type="button" 
                                 id="applyDelaysBtn" 
-                                class="primary" 
+                                class="revert" 
                                 style="padding: 10px 20px; white-space: nowrap;">
                             Применить
                         </button>
@@ -657,14 +721,6 @@
                 const configForm = document.getElementById('configForm');
                 if (configForm) {
                     const configFormData = new FormData(configForm);
-                    const scheduleFormData = new FormData(scheduleForm);
-                    
-                    // Копируем все поля из configForm (кроме action)
-                    for (const [key, value] of configFormData.entries()) {
-                        if (key !== 'action') {
-                            scheduleFormData.append(key, value);
-                        }
-                    }
                     
                     // Создаем скрытые поля для всех параметров
                     for (const [key, value] of configFormData.entries()) {

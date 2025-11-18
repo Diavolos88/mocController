@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Неправильные заглушки - MockController</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+            margin: 0;
+            padding: 40px 20px;
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            padding: 32px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            text-decoration: none;
+            color: #666;
+            font-size: 14px;
+            padding: 6px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .back-link:hover {
+            background-color: #f0f0f0;
+            border-color: #999;
+        }
+        h1 { 
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+        .warning {
+            padding: 12px 16px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            margin-bottom: 24px;
+            color: #856404;
+            font-size: 14px;
+        }
+        .card { 
+            border: 1px solid #d0d0d0;
+            border-radius: 6px; 
+            padding: 20px; 
+            margin-bottom: 16px;
+            background: #fafafa;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            border-color: #ff9800;
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.1);
+        }
+        .card:last-child {
+            margin-bottom: 0;
+        }
+        .card h2 {
+            margin: 0 0 12px 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #ff9800;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .card p {
+            margin: 8px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .empty { 
+            color: #888; 
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        a.card-link { 
+            display: inline-block;
+            text-decoration: none; 
+            color: #1d72b8;
+            font-weight: 500;
+            margin-top: 12px;
+            padding: 8px 16px;
+            border: 1px solid #1d72b8;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        a.card-link:hover { 
+            background-color: #1d72b8;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a th:href="@{/}" class="back-link">← Назад к списку систем</a>
+    <h1>Неправильные заглушки</h1>
+    <p class="subtitle">Заглушки, которые не соответствуют шаблону: название_системы-название_эмуляции-mock</p>
+
+    <div class="warning">
+        <strong>Внимание:</strong> Эти заглушки не соответствуют принятому шаблону именования. 
+        Рекомендуется переименовать их в формат: название_системы-название_эмуляции-mock
+    </div>
+
+    <div th:if="${#lists.isEmpty(configs)}" class="empty">
+        Все заглушки соответствуют шаблону именования.
+    </div>
+
+    <div th:each="config : ${configs}" class="card">
+        <h2 th:text="${config.systemName}">mock-name</h2>
+        <p>Последнее обновление: <span th:text="${formattedDates != null and formattedDates.containsKey(config.systemName) ? formattedDates.get(config.systemName) : 'n/a'}">n/a</span></p>
+        <a th:href="@{/configs/{name}(name=${config.systemName})}" class="card-link">Перейти к настройкам</a>
+    </div>
+</div>
+</body>
+</html>
+

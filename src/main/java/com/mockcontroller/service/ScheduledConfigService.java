@@ -161,6 +161,13 @@ public class ScheduledConfigService {
                             // Если ID отсутствует (старый формат), генерируем новый
                             if (update.getId() == null || update.getId().isEmpty()) {
                                 update.setId(java.util.UUID.randomUUID().toString());
+                                // Удаляем старый файл (без ID в имени)
+                                try {
+                                    Files.deleteIfExists(path);
+                                } catch (IOException e) {
+                                    logger.warn("Failed to delete old format file {}", path, e);
+                                }
+                                // Сохраняем с новым ID
                                 persistScheduledUpdate(update);
                             }
                             // Загружаем только будущие обновления
@@ -181,9 +188,6 @@ public class ScheduledConfigService {
         }
     }
 
-    private String sanitize(String name) {
-        return name.replaceAll("[^a-zA-Z0-9_-]", "_");
-    }
 
     public static DateTimeFormatter getDateTimeFormatter() {
         return DATE_TIME_FORMATTER;

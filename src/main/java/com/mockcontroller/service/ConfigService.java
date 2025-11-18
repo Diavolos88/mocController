@@ -60,17 +60,40 @@ public class ConfigService {
         persist(stored);
     }
 
-    public void revertToStart(String systemName) {
+    public boolean revertToStart(String systemName) {
         StoredConfig stored = configs.get(systemName);
         if (stored == null) {
             throw new IllegalArgumentException("Config not found: " + systemName);
         }
-        // При откате увеличиваем версию
-        int newVersion = stored.getVersion() + 1;
-        stored.setVersion(newVersion);
-        stored.setCurrentConfig(stored.getStartConfig());
-        stored.setUpdatedAt(Instant.now());
-        persist(stored);
+        
+        // Проверяем, есть ли изменения (текущий конфиг отличается от стартового)
+        // ВАЖНО: Сравниваем только содержимое конфигов (delays, stringParams, loggingLv), версии НЕ сравниваются
+        if (jsonEquals(stored.getCurrentConfig(), stored.getStartConfig())) {
+            // Текущий конфиг уже равен стартовому - ничего не делаем, версия не меняется
+            return false;
+        }
+        
+        // Есть изменения - возвращаем к стартовому и увеличиваем версию
+        // Создаем копию стартового конфига, а не просто ссылку
+        try {
+            JsonNode startConfigCopy = objectMapper.readTree(
+                objectMapper.writeValueAsString(stored.getStartConfig())
+            );
+            int newVersion = stored.getVersion() + 1;
+            stored.setVersion(newVersion);
+            stored.setCurrentConfig(startConfigCopy);
+            stored.setUpdatedAt(Instant.now());
+            persist(stored);
+            return true;
+        } catch (Exception e) {
+            // Если не удалось создать копию, используем ссылку
+            int newVersion = stored.getVersion() + 1;
+            stored.setVersion(newVersion);
+            stored.setCurrentConfig(stored.getStartConfig());
+            stored.setUpdatedAt(Instant.now());
+            persist(stored);
+            return true;
+        }
     }
 
     public CheckUpdateResponse checkUpdate(CheckUpdateRequest request) {
@@ -269,6 +292,21 @@ public class ConfigService {
             throw new RuntimeException("Failed to save config " + stored.getSystemName(), e);
         }
     }
+    
+    public void deleteConfig(String systemName) {
+        String sanitizedName = sanitize(systemName);
+        StoredConfig removed = configs.remove(sanitizedName);
+        if (removed != null) {
+            try {
+                Path file = filePath(sanitizedName);
+                Files.deleteIfExists(file);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to delete config file for " + systemName, e);
+            }
+        } else {
+            throw new IllegalArgumentException("Config not found: " + systemName);
+        }
+    }
 
     private Path filePath(String name) {
         return storageDir.resolve(sanitize(name) + ".json");
@@ -285,7 +323,22 @@ public class ConfigService {
         if (left == null || right == null) {
             return false;
         }
-        return left.equals(right);
+        // Используем глубокое сравнение через сериализацию для надежности
+        // Это гарантирует, что порядок полей и форматирование не влияют на сравнение
+        // ВАЖНО: Сравниваем только содержимое JSON (delays, stringParams, loggingLv), версии НЕ сравниваются
+        try {
+            // Нормализуем JSON через чтение-запись для унификации порядка полей
+            String leftStr = objectMapper.writeValueAsString(
+                objectMapper.readTree(objectMapper.writeValueAsString(left))
+            );
+            String rightStr = objectMapper.writeValueAsString(
+                objectMapper.readTree(objectMapper.writeValueAsString(right))
+            );
+            return leftStr.equals(rightStr);
+        } catch (Exception e) {
+            // Если сериализация не удалась, используем стандартное сравнение
+            return left.equals(right);
+        }
     }
 
     public String toPrettyJson(JsonNode node) {
@@ -373,19 +426,18 @@ public class ConfigService {
         return dto;
     }
 
-    public void updateConfigFromForm(String systemName, Map<String, String> delays, 
-                                     Map<String, String> stringParams, String loggingLv) {
+    public boolean updateConfigFromForm(String systemName, Map<String, String> delays, 
+                                        Map<String, String> stringParams, String loggingLv) {
         StoredConfig stored = configs.get(systemName);
         if (stored == null) {
             throw new IllegalArgumentException("Config not found: " + systemName);
         }
         
-        // Увеличиваем версию
-        stored.setVersion(stored.getVersion() + 1);
-        
+        // Создаем новый конфиг из формы, нормализуя структуру через сериализацию
+        // Это гарантирует, что структура будет идентична текущему конфигу
         ObjectNode newConfig = objectMapper.createObjectNode();
         
-        // Обновляем delays
+        // Обновляем delays - всегда создаем объект для совпадения структуры
         ObjectNode delaysNode = objectMapper.createObjectNode();
         if (delays != null) {
             delays.forEach((key, value) -> {
@@ -398,9 +450,10 @@ public class ConfigService {
                 }
             });
         }
+        // Всегда добавляем delays для совпадения структуры со стартовым конфигом
         newConfig.set("delays", delaysNode);
         
-        // РћР±РЅРѕРІР»СЏРµРј stringParams
+        // Обновляем stringParams - всегда создаем объект для совпадения структуры
         ObjectNode stringParamsNode = objectMapper.createObjectNode();
         if (stringParams != null) {
             stringParams.forEach((key, value) -> {
@@ -409,6 +462,7 @@ public class ConfigService {
                 }
             });
         }
+        // Всегда добавляем stringParams для совпадения структуры со стартовым конфигом
         newConfig.set("stringParams", stringParamsNode);
         
         // Обновляем loggingLv
@@ -416,9 +470,37 @@ public class ConfigService {
             newConfig.put("loggingLv", loggingLv);
         }
         
-        stored.setCurrentConfig(newConfig);
+        // Нормализуем новый конфиг через сериализацию/десериализацию для унификации структуры
+        JsonNode normalizedNewConfig;
+        try {
+            normalizedNewConfig = objectMapper.readTree(objectMapper.writeValueAsString(newConfig));
+        } catch (Exception e) {
+            normalizedNewConfig = newConfig;
+        }
+        
+        // Нормализуем текущий конфиг для корректного сравнения
+        JsonNode normalizedCurrentConfig;
+        try {
+            normalizedCurrentConfig = objectMapper.readTree(objectMapper.writeValueAsString(stored.getCurrentConfig()));
+        } catch (Exception e) {
+            normalizedCurrentConfig = stored.getCurrentConfig();
+        }
+        
+        // Проверяем, есть ли изменения
+        // ВАЖНО: Сравниваем только содержимое конфигов (delays, stringParams, loggingLv), версии НЕ сравниваются
+        boolean hasChanges = !jsonEquals(normalizedCurrentConfig, normalizedNewConfig);
+        
+        if (!hasChanges) {
+            // Изменений нет - ничего не делаем, версия не меняется
+            return false;
+        }
+        
+        // Есть изменения - сохраняем нормализованный конфиг
+        stored.setVersion(stored.getVersion() + 1);
+        stored.setCurrentConfig(normalizedNewConfig);
         stored.setUpdatedAt(Instant.now());
         persist(stored);
+        return true;
     }
 
     public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, String loggingLv) {

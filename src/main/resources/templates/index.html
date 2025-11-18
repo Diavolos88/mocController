@@ -12,7 +12,7 @@
             background-color: #f5f5f5;
         }
         .container { 
-            max-width: 900px; 
+            max-width: 1000px; 
             margin: 0 auto;
             background: white;
             border-radius: 8px;
@@ -28,8 +28,89 @@
         }
         .subtitle {
             color: #666;
-            margin-bottom: 32px;
+            margin-bottom: 24px;
             font-size: 14px;
+        }
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .system-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .system-tab {
+            padding: 8px 16px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            background: #fafafa;
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .system-tab:hover {
+            background: #e8f4fd;
+            border-color: #1d72b8;
+            color: #1d72b8;
+        }
+        .system-tab.active {
+            background: #1d72b8;
+            border-color: #1d72b8;
+            color: white;
+        }
+        .system-tab.invalid {
+            border-color: #ff9800;
+        }
+        .system-tab.invalid.active {
+            background: #ff9800;
+            border-color: #ff9800;
+            color: white;
+        }
+        .system-tab.invalid:hover {
+            background: #ffb74d;
+            border-color: #ff9800;
+            color: white;
+        }
+        .system-tab-count {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            background: #f44336;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .invalid-link {
+            padding: 8px 16px;
+            background: #ff9800;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .invalid-link:hover {
+            background: #f57c00;
+        }
+        .invalid-badge {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            background: #f44336;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
         }
         .card { 
             border: 1px solid #d0d0d0;
@@ -65,7 +146,7 @@
             text-align: center;
             padding: 40px 20px;
         }
-        a { 
+        a.card-link { 
             display: inline-block;
             text-decoration: none; 
             color: #1d72b8;
@@ -76,26 +157,192 @@
             border-radius: 4px;
             transition: background-color 0.2s, color 0.2s;
         }
-        a:hover { 
+        a.card-link:hover { 
             background-color: #1d72b8;
             color: white;
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #ffcdd2;
+        }
+        .info {
+            color: #1976d2;
+            background: #e3f2fd;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #90caf9;
+        }
+        .card {
+            position: relative;
+        }
+        .delete-button {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .delete-button:hover {
+            background: #d32f2f;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .modal h3 {
+            margin: 0 0 16px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        .modal p {
+            margin: 0 0 24px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        .modal-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .modal-button.confirm {
+            background: #f44336;
+            color: white;
+        }
+        .modal-button.confirm:hover {
+            background: #d32f2f;
+        }
+        .modal-button.cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .modal-button.cancel:hover {
+            background: #d0d0d0;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Заглушки</h1>
-    <p class="subtitle">Здесь будут показаны все моки, которые прислали свои стартовые конфиги.</p>
+    <div class="header-actions">
+        <div>
+            <h1>Заглушки</h1>
+            <p class="subtitle">Группировка по системам (шаблон: название_системы-название_эмуляции-mock)</p>
+        </div>
+    </div>
+
+    <div th:if="${param.error}" class="error" th:text="${param.error[0]}"></div>
+    <div th:if="${param.info}" class="info" th:text="${param.info[0]}"></div>
+
+    <div th:if="${systemsWithCounts != null && !systemsWithCounts.isEmpty()}" class="system-tabs">
+        <a th:each="sysInfo : ${systemsWithCounts}" 
+           th:href="@{/(system=${sysInfo.name})}"
+           th:class="${currentSystem == sysInfo.name ? (sysInfo.invalid ? 'system-tab invalid active' : 'system-tab active') : (sysInfo.invalid ? 'system-tab invalid' : 'system-tab')}">
+            <span th:text="${sysInfo.name}">system</span>
+            <span class="system-tab-count" th:text="${sysInfo.count}">0</span>
+        </a>
+    </div>
 
     <div th:if="${#lists.isEmpty(configs)}" class="empty">
-        Пока ни одна заглушка не зарегистрирована. Отправь конфиг через REST-эндпоинт.
+        <p th:if="${currentSystem != null}">Нет заглушек для системы "<span th:text="${currentSystem}"></span>"</p>
+        <p th:if="${currentSystem == null}">Пока ни одна заглушка не зарегистрирована. Отправь конфиг через REST-эндпоинт.</p>
     </div>
 
     <div th:each="config : ${configs}" class="card">
         <h2 th:text="${config.systemName}">mock-name</h2>
-        <p>Последнее обновление: <span th:text="${config.updatedAt}">n/a</span></p>
-        <a th:href="@{/configs/{name}(name=${config.systemName})}">Перейти к настройкам</a>
+        <p>Последнее обновление: <span th:text="${formattedDates != null and formattedDates.containsKey(config.systemName) ? formattedDates.get(config.systemName) : 'n/a'}">n/a</span></p>
+        <a th:href="@{/configs/{name}(name=${config.systemName})}" class="card-link">Перейти к настройкам</a>
+        <button class="delete-button" th:data-system-name="${config.systemName}" type="button">Удалить</button>
     </div>
 </div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div id="deleteModalOverlay" class="modal-overlay">
+    <div class="modal">
+        <h3>Подтверждение удаления</h3>
+        <p id="deleteModalText">Вы уверены, что хотите удалить конфиг?</p>
+        <div class="modal-buttons">
+            <button class="modal-button cancel" type="button">НЕТ</button>
+            <form id="deleteForm" method="post" style="margin: 0;">
+                <input type="hidden" name="action" value="delete"/>
+                <button class="modal-button confirm" type="submit">ДА</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const deleteButtons = document.querySelectorAll('.delete-button');
+    const modalOverlay = document.getElementById('deleteModalOverlay');
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteModalText = document.getElementById('deleteModalText');
+    
+    if (modalOverlay && deleteForm && deleteModalText) {
+        const cancelButton = modalOverlay.querySelector('.modal-button.cancel');
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const systemName = this.getAttribute('data-system-name');
+                if (systemName) {
+                    deleteModalText.textContent = 'Вы уверены, что хотите удалить конфиг ' + systemName + '?';
+                    deleteForm.action = '/configs/' + encodeURIComponent(systemName);
+                    modalOverlay.classList.add('show');
+                }
+            });
+        });
+
+        if (cancelButton) {
+            cancelButton.addEventListener('click', function() {
+                modalOverlay.classList.remove('show');
+            });
+        }
+
+        // Закрытие по клику вне модального окна
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('show');
+            }
+        });
+    }
+</script>
 </body>
 </html>

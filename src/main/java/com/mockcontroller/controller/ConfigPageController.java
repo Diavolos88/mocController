@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,23 @@ public class ConfigPageController {
     private final ConfigService configService;
     private final ScheduledConfigService scheduledConfigService;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss dd-MM-yyyy");
+    
+    // Внутренний класс для передачи данных системы
+    public static class SystemInfo {
+        private final String name;
+        private final int count;
+        private final boolean isInvalid;
+        
+        public SystemInfo(String name, int count, boolean isInvalid) {
+            this.name = name;
+            this.count = count;
+            this.isInvalid = isInvalid;
+        }
+        
+        public String getName() { return name; }
+        public int getCount() { return count; }
+        public boolean isInvalid() { return isInvalid; }
+    }
 
     public ConfigPageController(ConfigService configService, ScheduledConfigService scheduledConfigService) {
         this.configService = configService;
@@ -35,9 +53,135 @@ public class ConfigPageController {
     }
 
     @GetMapping("/")
-    public String landing(Model model) {
-        model.addAttribute("configs", configService.findAll());
+    public String landing(@RequestParam(required = false) String system, Model model) {
+        List<StoredConfig> allConfigs = new ArrayList<>(configService.findAll());
+        
+        // Разделяем на правильные (по шаблону) и неправильные
+        Map<String, List<StoredConfig>> groupedBySystem = new HashMap<>();
+        List<StoredConfig> invalidConfigs = new ArrayList<>();
+        
+        for (StoredConfig config : allConfigs) {
+            String systemName = config.getSystemName();
+            // Проверяем шаблон: название_системы-название_эмуляции-mock
+            if (isValidTemplate(systemName)) {
+                String systemPrefix = extractSystemPrefix(systemName);
+                groupedBySystem.computeIfAbsent(systemPrefix, k -> new ArrayList<>()).add(config);
+            } else {
+                invalidConfigs.add(config);
+            }
+        }
+        
+        // Сортируем неправильные заглушки по алфавиту
+        invalidConfigs.sort((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()));
+        
+        // Сортируем заглушки внутри каждой системы по алфавиту
+        for (List<StoredConfig> configs : groupedBySystem.values()) {
+            configs.sort((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()));
+        }
+        
+        // Сортируем системы по алфавиту
+        List<String> systems = new ArrayList<>(groupedBySystem.keySet());
+        systems.sort(String::compareToIgnoreCase);
+        
+        // Создаем список объектов с системой и количеством для удобного отображения
+        List<SystemInfo> systemsWithCounts = new ArrayList<>();
+        for (String sys : systems) {
+            systemsWithCounts.add(new SystemInfo(sys, groupedBySystem.get(sys).size(), false));
+        }
+        
+        // Добавляем "Заглушки" (неправильные) в список, если они есть
+        if (!invalidConfigs.isEmpty()) {
+            systemsWithCounts.add(new SystemInfo("Заглушки", invalidConfigs.size(), true));
+        }
+        
+        // Если указана система, фильтруем
+        if (system != null && !system.isEmpty()) {
+            if ("Заглушки".equals(system)) {
+                // Показываем неправильные заглушки
+                model.addAttribute("configs", invalidConfigs);
+                model.addAttribute("currentSystem", "Заглушки");
+            } else {
+                List<StoredConfig> filteredConfigs = groupedBySystem.getOrDefault(system, new ArrayList<>());
+                model.addAttribute("configs", filteredConfigs);
+                model.addAttribute("currentSystem", system);
+            }
+        } else {
+            // Показываем первую систему по умолчанию
+            if (!systems.isEmpty()) {
+                String firstSystem = systems.get(0);
+                model.addAttribute("configs", groupedBySystem.get(firstSystem));
+                model.addAttribute("currentSystem", firstSystem);
+            } else if (!invalidConfigs.isEmpty()) {
+                // Если нет правильных систем, но есть неправильные - показываем их
+                model.addAttribute("configs", invalidConfigs);
+                model.addAttribute("currentSystem", "Заглушки");
+            } else {
+                model.addAttribute("configs", new ArrayList<>());
+                model.addAttribute("currentSystem", null);
+            }
+        }
+        
+        model.addAttribute("systemsWithCounts", systemsWithCounts);
+        
+        // Форматируем даты только для отображения (хранение не меняется)
+        Map<String, String> formattedDates = new HashMap<>();
+        for (StoredConfig config : allConfigs) {
+            if (config.getUpdatedAt() != null) {
+                formattedDates.put(config.getSystemName(), 
+                    config.getUpdatedAt().atZone(java.time.ZoneId.systemDefault())
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            }
+        }
+        model.addAttribute("formattedDates", formattedDates);
+        
         return "index";
+    }
+    
+    @GetMapping("/invalid")
+    public String invalidConfigs(Model model) {
+        List<StoredConfig> allConfigs = new ArrayList<>(configService.findAll());
+        List<StoredConfig> invalidConfigs = allConfigs.stream()
+                .filter(config -> !isValidTemplate(config.getSystemName()))
+                .sorted((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()))
+                .toList();
+        
+        // Форматируем даты только для отображения (хранение не меняется)
+        Map<String, String> formattedDates = new HashMap<>();
+        for (StoredConfig config : invalidConfigs) {
+            if (config.getUpdatedAt() != null) {
+                formattedDates.put(config.getSystemName(), 
+                    config.getUpdatedAt().atZone(java.time.ZoneId.systemDefault())
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            }
+        }
+        
+        model.addAttribute("configs", invalidConfigs);
+        model.addAttribute("formattedDates", formattedDates);
+        return "invalid";
+    }
+    
+    private boolean isValidTemplate(String systemName) {
+        if (systemName == null || systemName.isEmpty()) {
+            return false;
+        }
+        // Шаблон: название_системы-название_эмуляции-mock
+        // Должно быть минимум 2 тире и заканчиваться на -mock
+        int dashCount = 0;
+        for (char c : systemName.toCharArray()) {
+            if (c == '-') {
+                dashCount++;
+            }
+        }
+        return dashCount >= 2 && systemName.endsWith("-mock");
+    }
+    
+    private String extractSystemPrefix(String systemName) {
+        // Берем первое слово до первого тире
+        int firstDashIndex = systemName.indexOf('-');
+        if (firstDashIndex > 0) {
+            return systemName.substring(0, firstDashIndex);
+        }
+        return systemName;
     }
 
     @GetMapping("/configs/{systemName}")
@@ -90,10 +234,14 @@ public class ConfigPageController {
                 }
             });
             
-            // РР·РІР»РµРєР°РµРј loggingLv
+            // Извлекаем loggingLv
             String loggingLv = allParams.get("loggingLv");
             
-            configService.updateConfigFromForm(decodedName, delays, stringParams, loggingLv);
+            boolean hasChanges = configService.updateConfigFromForm(decodedName, delays, stringParams, loggingLv);
+            if (!hasChanges) {
+                return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + 
+                       "?info=" + java.net.URLEncoder.encode("Изменений не было, конфиг не обновлен", StandardCharsets.UTF_8);
+            }
             return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + "?saved=true";
         } catch (Exception e) {
             return "redirect:/configs/" + systemName + "?error=" + 
@@ -105,8 +253,12 @@ public class ConfigPageController {
     public String revertConfig(@PathVariable String systemName) {
         try {
             String decodedName = URLDecoder.decode(systemName, StandardCharsets.UTF_8);
-            configService.revertToStart(decodedName);
-            return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8);
+            boolean hasChanges = configService.revertToStart(decodedName);
+            if (!hasChanges) {
+                return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + 
+                       "?info=" + java.net.URLEncoder.encode("Конфиг уже соответствует стартовому, изменений не было", StandardCharsets.UTF_8);
+            }
+            return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + "?saved=true";
         } catch (Exception e) {
             return "redirect:/configs/" + systemName + "?error=" + 
                    java.net.URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
@@ -123,6 +275,42 @@ public class ConfigPageController {
         } catch (Exception e) {
             return "redirect:/configs/" + systemName + "?error=" + 
                    java.net.URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+        }
+    }
+
+    @PostMapping(value = "/configs/{systemName}", params = "action=clearAllScheduled")
+    public String clearAllScheduledUpdates(@PathVariable String systemName) {
+        try {
+            String decodedName = URLDecoder.decode(systemName, StandardCharsets.UTF_8);
+            List<ScheduledConfigUpdate> updates = scheduledConfigService.getScheduledUpdates(decodedName);
+            for (ScheduledConfigUpdate update : updates) {
+                scheduledConfigService.cancelScheduledUpdate(update.getId());
+            }
+            return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + 
+                   "?info=" + java.net.URLEncoder.encode("Все запланированные обновления удалены", StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "redirect:/configs/" + systemName + "?error=" + 
+                   java.net.URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+        }
+    }
+
+    @PostMapping(value = "/configs/{systemName}", params = "action=delete")
+    public String deleteConfig(@PathVariable String systemName) {
+        try {
+            String decodedName = URLDecoder.decode(systemName, StandardCharsets.UTF_8);
+            // Сначала получаем список запланированных обновлений до удаления конфига
+            List<ScheduledConfigUpdate> updates = scheduledConfigService.getScheduledUpdates(decodedName);
+            // Удаляем конфиг
+            configService.deleteConfig(decodedName);
+            // Удаляем все запланированные обновления для этой системы
+            for (ScheduledConfigUpdate update : updates) {
+                scheduledConfigService.cancelScheduledUpdate(update.getId());
+            }
+            return "redirect:/?info=" + java.net.URLEncoder.encode("Конфиг '" + decodedName + "' успешно удален", StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            // При ошибке редиректим на главную страницу, так как конфиг может быть уже удален
+            return "redirect:/?error=" + 
+                   java.net.URLEncoder.encode("Ошибка при удалении конфига: " + e.getMessage(), StandardCharsets.UTF_8);
         }
     }
 
