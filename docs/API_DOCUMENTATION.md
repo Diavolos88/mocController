@@ -954,9 +954,45 @@ POST /api/configs/checkUpdate
 ## Примечания
 
 - Все названия заглушек (`SystemName`) автоматически санитизируются (специальные символы заменяются на `_`)
-- Конфиги сохраняются локально в `data/configs/{systemName}.json`
+- **Хранение данных**: Конфиги сохраняются в PostgreSQL (таблицы `stored_configs` и `scheduled_config_updates`)
 - Версия хранится отдельно от конфига в поле `version` объекта `StoredConfig`
 - Конфиг не содержит поля "Config version" - версия управляется только сервисом
+- Таблицы создаются автоматически при первом запуске приложения (Hibernate `ddl-auto: update`)
+
+## База данных
+
+### Структура таблиц
+
+**stored_configs:**
+- `system_name` (VARCHAR, PRIMARY KEY) - название системы
+- `start_config` (TEXT) - стартовый конфиг в формате JSON
+- `current_config` (TEXT) - текущий конфиг в формате JSON
+- `updated_at` (TIMESTAMP) - время последнего обновления
+- `version` (INTEGER) - версия конфига
+
+**scheduled_config_updates:**
+- `id` (VARCHAR, PRIMARY KEY) - UUID обновления
+- `system_name` (VARCHAR) - название системы
+- `new_config` (TEXT) - новый конфиг в формате JSON
+- `scheduled_time` (TIMESTAMP) - запланированное время
+- `created_at` (TIMESTAMP) - время создания
+- `comment` (VARCHAR) - комментарий
+
+### Настройка подключения
+
+Подключение к БД настраивается в `application.yml`:
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mockcontroller
+    username: postgres
+    password: ваш_пароль
+  jpa:
+    hibernate:
+      ddl-auto: update
+```
+
+Подробнее об установке PostgreSQL: [POSTGRESQL_SETUP.md](../../POSTGRESQL_SETUP.md)
 
 ## Пример интеграции
 

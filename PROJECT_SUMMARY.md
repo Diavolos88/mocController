@@ -50,7 +50,9 @@
 ## Технологии
 - Java 17
 - Spring Boot 3.3.1
-- Thymeleaf (UI)
+- Spring Data JPA
+- PostgreSQL
+- Thymeleaf
 - Maven
 
 ## Запуск
@@ -59,6 +61,7 @@
 ```
 
 ## Хранение
-- Конфиги сохраняются локально в `data/configs/*.json`
-- Каждый файл содержит: systemName, startConfig, currentConfig, version, updatedAt
+- Конфиги сохраняются в PostgreSQL (таблицы `stored_configs` и `scheduled_config_updates`)
+- Каждая запись содержит: systemName, startConfig, currentConfig, version, updatedAt
+- Таблицы создаются автоматически при первом запуске
 

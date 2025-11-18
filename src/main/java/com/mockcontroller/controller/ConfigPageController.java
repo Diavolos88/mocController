@@ -137,29 +137,6 @@ public class ConfigPageController {
         return "index";
     }
     
-    @GetMapping("/invalid")
-    public String invalidConfigs(Model model) {
-        List<StoredConfig> allConfigs = new ArrayList<>(configService.findAll());
-        List<StoredConfig> invalidConfigs = allConfigs.stream()
-                .filter(config -> !isValidTemplate(config.getSystemName()))
-                .sorted((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()))
-                .toList();
-        
-        // Форматируем даты только для отображения (хранение не меняется)
-        Map<String, String> formattedDates = new HashMap<>();
-        for (StoredConfig config : invalidConfigs) {
-            if (config.getUpdatedAt() != null) {
-                formattedDates.put(config.getSystemName(), 
-                    config.getUpdatedAt().atZone(java.time.ZoneId.systemDefault())
-                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            }
-        }
-        
-        model.addAttribute("configs", invalidConfigs);
-        model.addAttribute("formattedDates", formattedDates);
-        return "invalid";
-    }
-    
     private boolean isValidTemplate(String systemName) {
         if (systemName == null || systemName.isEmpty()) {
             return false;
@@ -282,10 +259,7 @@ public class ConfigPageController {
     public String clearAllScheduledUpdates(@PathVariable String systemName) {
         try {
             String decodedName = URLDecoder.decode(systemName, StandardCharsets.UTF_8);
-            List<ScheduledConfigUpdate> updates = scheduledConfigService.getScheduledUpdates(decodedName);
-            for (ScheduledConfigUpdate update : updates) {
-                scheduledConfigService.cancelScheduledUpdate(update.getId());
-            }
+            scheduledConfigService.deleteAllBySystemName(decodedName);
             return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + 
                    "?info=" + java.net.URLEncoder.encode("Все запланированные обновления удалены", StandardCharsets.UTF_8);
         } catch (Exception e) {
@@ -298,14 +272,10 @@ public class ConfigPageController {
     public String deleteConfig(@PathVariable String systemName) {
         try {
             String decodedName = URLDecoder.decode(systemName, StandardCharsets.UTF_8);
-            // Сначала получаем список запланированных обновлений до удаления конфига
-            List<ScheduledConfigUpdate> updates = scheduledConfigService.getScheduledUpdates(decodedName);
+            // Удаляем все запланированные обновления для этой системы
+            scheduledConfigService.deleteAllBySystemName(decodedName);
             // Удаляем конфиг
             configService.deleteConfig(decodedName);
-            // Удаляем все запланированные обновления для этой системы
-            for (ScheduledConfigUpdate update : updates) {
-                scheduledConfigService.cancelScheduledUpdate(update.getId());
-            }
             return "redirect:/?info=" + java.net.URLEncoder.encode("Конфиг '" + decodedName + "' успешно удален", StandardCharsets.UTF_8);
         } catch (Exception e) {
             // При ошибке редиректим на главную страницу, так как конфиг может быть уже удален

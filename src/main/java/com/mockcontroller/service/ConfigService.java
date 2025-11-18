@@ -13,169 +13,173 @@ import com.mockcontroller.model.ConfigResponse;
 import com.mockcontroller.model.ConfigSyncResponse;
 import com.mockcontroller.model.ConfigSyncResponse.SyncStatus;
 import com.mockcontroller.model.StoredConfig;
+import com.mockcontroller.model.entity.StoredConfigEntity;
+import com.mockcontroller.repository.StoredConfigRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class ConfigService {
 
     private final ObjectMapper objectMapper;
-    private final Map<String, StoredConfig> configs = new ConcurrentHashMap<>();
-    private final Path storageDir = Path.of("data", "configs");
+    private final StoredConfigRepository repository;
+    private final ConfigMapper mapper;
 
-    public ConfigService(ObjectMapper objectMapper) throws IOException {
+    public ConfigService(ObjectMapper objectMapper, StoredConfigRepository repository, ConfigMapper mapper) {
         this.objectMapper = objectMapper;
-        initStorage();
-        loadExistingConfigs();
+        this.repository = repository;
+        this.mapper = mapper;
     }
 
     public Collection<StoredConfig> findAll() {
-        return configs.values().stream()
+        return repository.findAll().stream()
+                .map(mapper::toModel)
                 .sorted((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()))
-                .toList();
+                .collect(Collectors.toList());
     }
 
     public Optional<StoredConfig> findBySystemName(String systemName) {
-        return Optional.ofNullable(configs.get(systemName));
+        return repository.findBySystemName(sanitize(systemName))
+                .map(mapper::toModel);
     }
 
+    @Transactional
     public void updateCurrentConfig(String systemName, JsonNode newConfig) {
-        StoredConfig stored = configs.get(systemName);
-        if (stored == null) {
-            throw new IllegalArgumentException("Config not found: " + systemName);
-        }
-        // Увеличиваем версию при обновлении через UI
-        int newVersion = stored.getVersion() + 1;
-        stored.setVersion(newVersion);
-        stored.setCurrentConfig(newConfig);
-        stored.setUpdatedAt(Instant.now());
-        persist(stored);
+        StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
+                .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
+        
+        int newVersion = entity.getVersion() + 1;
+        entity.setVersion(newVersion);
+        entity.setCurrentConfigJson(jsonToString(newConfig));
+        entity.setUpdatedAt(Instant.now());
+        repository.save(entity);
     }
 
+    @Transactional
     public boolean revertToStart(String systemName) {
-        StoredConfig stored = configs.get(systemName);
-        if (stored == null) {
-            throw new IllegalArgumentException("Config not found: " + systemName);
-        }
+        StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
+                .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
-        // Проверяем, есть ли изменения (текущий конфиг отличается от стартового)
-        // ВАЖНО: Сравниваем только содержимое конфигов (delays, stringParams, loggingLv), версии НЕ сравниваются
+        StoredConfig stored = mapper.toModel(entity);
+        
+        // Проверяем, есть ли изменения
         if (jsonEquals(stored.getCurrentConfig(), stored.getStartConfig())) {
-            // Текущий конфиг уже равен стартовому - ничего не делаем, версия не меняется
             return false;
         }
         
         // Есть изменения - возвращаем к стартовому и увеличиваем версию
-        // Создаем копию стартового конфига, а не просто ссылку
         try {
             JsonNode startConfigCopy = objectMapper.readTree(
                 objectMapper.writeValueAsString(stored.getStartConfig())
             );
-            int newVersion = stored.getVersion() + 1;
-            stored.setVersion(newVersion);
-            stored.setCurrentConfig(startConfigCopy);
-            stored.setUpdatedAt(Instant.now());
-            persist(stored);
+            int newVersion = entity.getVersion() + 1;
+            entity.setVersion(newVersion);
+            entity.setCurrentConfigJson(jsonToString(startConfigCopy));
+            entity.setUpdatedAt(Instant.now());
+            repository.save(entity);
             return true;
         } catch (Exception e) {
-            // Если не удалось создать копию, используем ссылку
-            int newVersion = stored.getVersion() + 1;
-            stored.setVersion(newVersion);
-            stored.setCurrentConfig(stored.getStartConfig());
-            stored.setUpdatedAt(Instant.now());
-            persist(stored);
+            int newVersion = entity.getVersion() + 1;
+            entity.setVersion(newVersion);
+            entity.setCurrentConfigJson(entity.getStartConfigJson());
+            entity.setUpdatedAt(Instant.now());
+            repository.save(entity);
             return true;
         }
     }
 
+    @Transactional
     public CheckUpdateResponse checkUpdate(CheckUpdateRequest request) {
         String sanitizedName = sanitize(request.getSystemName());
         String incomingVersion = request.getVersion();
         JsonNode incomingConfig = request.getConfig();
-        StoredConfig current = configs.get(sanitizedName);
+        Optional<StoredConfigEntity> currentOpt = repository.findBySystemName(sanitizedName);
 
         int incomingVersionInt = parseVersion(incomingVersion);
 
-        if (current == null) {
+        if (currentOpt.isEmpty()) {
             // Конфига нет - если версия 1, сохраняем как новый стартовый конфиг
             if (incomingVersionInt == 1) {
-                StoredConfig stored = new StoredConfig(sanitizedName, incomingConfig, incomingConfig, Instant.now());
-                stored.setVersion(1);
-                configs.put(sanitizedName, stored);
-                persist(stored);
+                StoredConfigEntity entity = new StoredConfigEntity();
+                entity.setSystemName(sanitizedName);
+                entity.setStartConfigJson(jsonToString(incomingConfig));
+                entity.setCurrentConfigJson(jsonToString(incomingConfig));
+                entity.setUpdatedAt(Instant.now());
+                entity.setVersion(1);
+                repository.save(entity);
                 return new CheckUpdateResponse(false, "v1");
             }
-            // Если версия не 1, но конфига нет - нужна регистрация с версией 1
             return new CheckUpdateResponse(false, null);
         }
 
-        // Получаем текущую версию из объекта
+        StoredConfigEntity current = currentOpt.get();
         int currentVersion = current.getVersion();
 
         // Если версия 1, но конфиг отличается от стартового - перезаписываем стартовый
         if (incomingVersionInt == 1) {
-            if (!jsonEquals(current.getStartConfig(), incomingConfig)) {
-                // Конфиг изменился - обновляем стартовый и повышаем версию
+            StoredConfig stored = mapper.toModel(current);
+            if (!jsonEquals(stored.getStartConfig(), incomingConfig)) {
                 int newVersion = currentVersion + 1;
                 current.setVersion(newVersion);
-                current.setStartConfig(incomingConfig);
-                current.setCurrentConfig(incomingConfig);
+                current.setStartConfigJson(jsonToString(incomingConfig));
+                current.setCurrentConfigJson(jsonToString(incomingConfig));
                 current.setUpdatedAt(Instant.now());
-                persist(current);
+                repository.save(current);
                 return new CheckUpdateResponse(false, "v" + newVersion);
             }
-            // Конфиг совпадает - обновлений не требуется
             return new CheckUpdateResponse(false, "v" + currentVersion);
         }
 
-        // Если версия заглушки меньше нашей (но не 1) - нужна обновление
+        // Если версия заглушки меньше нашей - нужна обновление
         if (incomingVersionInt < currentVersion) {
             return new CheckUpdateResponse(true, "v" + currentVersion);
         }
 
-        // Версии совпадают или заглушка новее - обновлений не требуется
         return new CheckUpdateResponse(false, "v" + currentVersion);
     }
 
+    @Transactional
     public ConfigSyncResponse handleIncoming(ConfigRequest request) {
         String sanitizedName = sanitize(request.getSystemName());
-        StoredConfig current = configs.get(sanitizedName);
+        Optional<StoredConfigEntity> currentOpt = repository.findBySystemName(sanitizedName);
         JsonNode incoming = request.getConfig();
 
-        if (current == null) {
-            // Первая регистрация - сохраняем как есть
-            StoredConfig stored = new StoredConfig(sanitizedName, incoming, incoming, Instant.now());
-            // Версия по умолчанию 1
-            stored.setVersion(1);
-            configs.put(sanitizedName, stored);
-            persist(stored);
+        if (currentOpt.isEmpty()) {
+            // Первая регистрация
+            StoredConfigEntity entity = new StoredConfigEntity();
+            entity.setSystemName(sanitizedName);
+            entity.setStartConfigJson(jsonToString(incoming));
+            entity.setCurrentConfigJson(jsonToString(incoming));
+            entity.setUpdatedAt(Instant.now());
+            entity.setVersion(1);
+            repository.save(entity);
             return new ConfigSyncResponse(SyncStatus.START_REGISTERED,
                     "Start config saved", "v1");
         }
 
+        StoredConfigEntity current = currentOpt.get();
+        StoredConfig stored = mapper.toModel(current);
+
         // Сравниваем стартовый конфиг
-        if (!jsonEquals(current.getStartConfig(), incoming)) {
-            // Стартовый конфиг изменился - обновляем и повышаем версию
+        if (!jsonEquals(stored.getStartConfig(), incoming)) {
             int newVersion = current.getVersion() + 1;
             current.setVersion(newVersion);
-            current.setStartConfig(incoming);
-            current.setCurrentConfig(incoming);
+            current.setStartConfigJson(jsonToString(incoming));
+            current.setCurrentConfigJson(jsonToString(incoming));
             current.setUpdatedAt(Instant.now());
-            persist(current);
+            repository.save(current);
             return new ConfigSyncResponse(SyncStatus.UPDATED_START_CONFIG,
                     "Start config updated", "v" + newVersion);
         }
 
         // Сравниваем текущий конфиг
-        if (!jsonEquals(current.getCurrentConfig(), incoming)) {
+        if (!jsonEquals(stored.getCurrentConfig(), incoming)) {
             return new ConfigSyncResponse(SyncStatus.UPDATE_AVAILABLE,
                     "New config version available", "v" + current.getVersion());
         }
@@ -185,31 +189,23 @@ public class ConfigService {
     }
 
     public ConfigResponse getConfig(String systemName, String version) {
-        String sanitizedName = sanitize(systemName);
-        StoredConfig stored = configs.get(sanitizedName);
+        StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
+                .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
-        if (stored == null) {
-            throw new IllegalArgumentException("Config not found: " + systemName);
-        }
-        
+        StoredConfig stored = mapper.toModel(entity);
         int requestedVersion = parseVersion(version);
         int currentVersion = stored.getVersion();
         
         JsonNode configToReturn;
         String versionToReturn;
         
-        // Если версия не указана или указана текущая - возвращаем текущий конфиг
         if (version == null || version.isEmpty() || requestedVersion == currentVersion) {
             configToReturn = stored.getCurrentConfig();
             versionToReturn = "v" + currentVersion;
-        } 
-        // Если запрошена версия 1 - возвращаем стартовый конфиг
-        else if (requestedVersion == 1) {
+        } else if (requestedVersion == 1) {
             configToReturn = stored.getStartConfig();
             versionToReturn = "v1";
-        }
-        // Если запрошена несуществующая версия - возвращаем текущий конфиг с предупреждением
-        else {
+        } else {
             configToReturn = stored.getCurrentConfig();
             versionToReturn = "v" + currentVersion;
         }
@@ -226,7 +222,6 @@ public class ConfigService {
         if (versionStr == null || versionStr.isEmpty()) {
             return 1;
         }
-        // Парсим "v1", "v1.0", "1", "1.0" -> 1
         String cleaned = versionStr.trim();
         if (cleaned.startsWith("v")) {
             cleaned = cleaned.substring(1);
@@ -242,78 +237,19 @@ public class ConfigService {
         }
     }
 
-    private void initStorage() throws IOException {
-        if (!Files.exists(storageDir)) {
-            Files.createDirectories(storageDir);
-        }
-    }
-
-    private void loadExistingConfigs() throws IOException {
-        if (!Files.exists(storageDir)) {
-            return;
-        }
-        try (java.util.stream.Stream<Path> files = Files.list(storageDir)) {
-            files.filter(path -> path.toString().endsWith(".json"))
-                    .forEach(this::loadConfigFromFile);
-        }
-    }
-
-    private void loadConfigFromFile(Path file) {
-        try {
-            JsonNode node = objectMapper.readTree(file.toFile());
-            StoredConfig stored = new StoredConfig();
-            stored.setSystemName(node.get("systemName").asText());
-            stored.setStartConfig(node.get("startConfig"));
-            stored.setCurrentConfig(node.get("currentConfig"));
-            stored.setUpdatedAt(Instant.parse(node.get("updatedAt").asText()));
-            // Загружаем версию, если есть, иначе ставим 1
-            if (node.has("version")) {
-                stored.setVersion(node.get("version").asInt());
-            } else {
-                stored.setVersion(1);
-            }
-            configs.put(stored.getSystemName(), stored);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read config " + file, e);
-        }
-    }
-
-    private void persist(StoredConfig stored) {
-        try {
-            ObjectNode node = objectMapper.createObjectNode();
-            node.put("systemName", stored.getSystemName());
-            node.set("startConfig", stored.getStartConfig());
-            node.set("currentConfig", stored.getCurrentConfig());
-            node.put("updatedAt", stored.getUpdatedAt().toString());
-            node.put("version", stored.getVersion());
-            Files.writeString(filePath(stored.getSystemName()),
-                    objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(node));
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to save config " + stored.getSystemName(), e);
-        }
-    }
-    
-    public void deleteConfig(String systemName) {
-        String sanitizedName = sanitize(systemName);
-        StoredConfig removed = configs.remove(sanitizedName);
-        if (removed != null) {
-            try {
-                Path file = filePath(sanitizedName);
-                Files.deleteIfExists(file);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to delete config file for " + systemName, e);
-            }
-        } else {
-            throw new IllegalArgumentException("Config not found: " + systemName);
-        }
-    }
-
-    private Path filePath(String name) {
-        return storageDir.resolve(sanitize(name) + ".json");
-    }
-
     private String sanitize(String name) {
         return name.replaceAll("[^a-zA-Z0-9-_]", "_");
+    }
+
+    private String jsonToString(JsonNode jsonNode) {
+        if (jsonNode == null) {
+            return "{}";
+        }
+        try {
+            return objectMapper.writeValueAsString(jsonNode);
+        } catch (JsonProcessingException e) {
+            return jsonNode.toString();
+        }
     }
 
     private boolean jsonEquals(JsonNode left, JsonNode right) {
@@ -323,11 +259,7 @@ public class ConfigService {
         if (left == null || right == null) {
             return false;
         }
-        // Используем глубокое сравнение через сериализацию для надежности
-        // Это гарантирует, что порядок полей и форматирование не влияют на сравнение
-        // ВАЖНО: Сравниваем только содержимое JSON (delays, stringParams, loggingLv), версии НЕ сравниваются
         try {
-            // Нормализуем JSON через чтение-запись для унификации порядка полей
             String leftStr = objectMapper.writeValueAsString(
                 objectMapper.readTree(objectMapper.writeValueAsString(left))
             );
@@ -336,7 +268,6 @@ public class ConfigService {
             );
             return leftStr.equals(rightStr);
         } catch (Exception e) {
-            // Если сериализация не удалась, используем стандартное сравнение
             return left.equals(right);
         }
     }
@@ -360,10 +291,8 @@ public class ConfigService {
         JsonNode current = stored.getCurrentConfig();
         JsonNode start = stored.getStartConfig();
         
-        // Используем версию из объекта
         dto.setConfigVersion("v" + stored.getVersion());
         
-        // РџР°СЂСЃРёРј delays (int Р·РЅР°С‡РµРЅРёСЏ)
         JsonNode currentDelays = current.get("delays");
         JsonNode startDelays = start != null ? start.get("delays") : null;
         if (currentDelays != null && currentDelays.isObject()) {
@@ -373,7 +302,6 @@ public class ConfigService {
                 param.setValue(entry.getValue().asText());
                 param.setType("int");
                 
-                // РќР°С…РѕРґРёРј СЃС‚Р°СЂС‚РѕРІРѕРµ Р·РЅР°С‡РµРЅРёРµ
                 if (startDelays != null && startDelays.has(entry.getKey())) {
                     param.setStartValue(startDelays.get(entry.getKey()).asText());
                 } else {
@@ -384,7 +312,6 @@ public class ConfigService {
             });
         }
         
-        // РџР°СЂСЃРёРј stringParams (СЃС‚СЂРѕРєРѕРІС‹Рµ Р·РЅР°С‡РµРЅРёСЏ)
         JsonNode currentStringParams = current.get("stringParams");
         JsonNode startStringParams = start != null ? start.get("stringParams") : null;
         if (currentStringParams != null && currentStringParams.isObject()) {
@@ -394,7 +321,6 @@ public class ConfigService {
                 param.setValue(entry.getValue().asText());
                 param.setType("string");
                 
-                // РќР°С…РѕРґРёРј СЃС‚Р°СЂС‚РѕРІРѕРµ Р·РЅР°С‡РµРЅРёРµ
                 if (startStringParams != null && startStringParams.has(entry.getKey())) {
                     param.setStartValue(startStringParams.get(entry.getKey()).asText());
                 } else {
@@ -405,7 +331,6 @@ public class ConfigService {
             });
         }
         
-        // РџР°СЂСЃРёРј loggingLv (СѓСЂРѕРІРµРЅСЊ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ)
         JsonNode currentLogging = current.get("loggingLv");
         JsonNode startLogging = start != null ? start.get("loggingLv") : null;
         if (currentLogging != null) {
@@ -426,18 +351,16 @@ public class ConfigService {
         return dto;
     }
 
+    @Transactional
     public boolean updateConfigFromForm(String systemName, Map<String, String> delays, 
                                         Map<String, String> stringParams, String loggingLv) {
-        StoredConfig stored = configs.get(systemName);
-        if (stored == null) {
-            throw new IllegalArgumentException("Config not found: " + systemName);
-        }
+        StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
+                .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
-        // Создаем новый конфиг из формы, нормализуя структуру через сериализацию
-        // Это гарантирует, что структура будет идентична текущему конфигу
+        StoredConfig stored = mapper.toModel(entity);
+        
         ObjectNode newConfig = objectMapper.createObjectNode();
         
-        // Обновляем delays - всегда создаем объект для совпадения структуры
         ObjectNode delaysNode = objectMapper.createObjectNode();
         if (delays != null) {
             delays.forEach((key, value) -> {
@@ -445,15 +368,13 @@ public class ConfigService {
                     try {
                         delaysNode.put(key, Integer.parseInt(value));
                     } catch (NumberFormatException e) {
-                        delaysNode.put(key, value); // fallback
+                        delaysNode.put(key, value);
                     }
                 }
             });
         }
-        // Всегда добавляем delays для совпадения структуры со стартовым конфигом
         newConfig.set("delays", delaysNode);
         
-        // Обновляем stringParams - всегда создаем объект для совпадения структуры
         ObjectNode stringParamsNode = objectMapper.createObjectNode();
         if (stringParams != null) {
             stringParams.forEach((key, value) -> {
@@ -462,15 +383,12 @@ public class ConfigService {
                 }
             });
         }
-        // Всегда добавляем stringParams для совпадения структуры со стартовым конфигом
         newConfig.set("stringParams", stringParamsNode);
         
-        // Обновляем loggingLv
         if (loggingLv != null && !loggingLv.isEmpty()) {
             newConfig.put("loggingLv", loggingLv);
         }
         
-        // Нормализуем новый конфиг через сериализацию/десериализацию для унификации структуры
         JsonNode normalizedNewConfig;
         try {
             normalizedNewConfig = objectMapper.readTree(objectMapper.writeValueAsString(newConfig));
@@ -478,7 +396,6 @@ public class ConfigService {
             normalizedNewConfig = newConfig;
         }
         
-        // Нормализуем текущий конфиг для корректного сравнения
         JsonNode normalizedCurrentConfig;
         try {
             normalizedCurrentConfig = objectMapper.readTree(objectMapper.writeValueAsString(stored.getCurrentConfig()));
@@ -486,27 +403,22 @@ public class ConfigService {
             normalizedCurrentConfig = stored.getCurrentConfig();
         }
         
-        // Проверяем, есть ли изменения
-        // ВАЖНО: Сравниваем только содержимое конфигов (delays, stringParams, loggingLv), версии НЕ сравниваются
         boolean hasChanges = !jsonEquals(normalizedCurrentConfig, normalizedNewConfig);
         
         if (!hasChanges) {
-            // Изменений нет - ничего не делаем, версия не меняется
             return false;
         }
         
-        // Есть изменения - сохраняем нормализованный конфиг
-        stored.setVersion(stored.getVersion() + 1);
-        stored.setCurrentConfig(normalizedNewConfig);
-        stored.setUpdatedAt(Instant.now());
-        persist(stored);
+        entity.setVersion(entity.getVersion() + 1);
+        entity.setCurrentConfigJson(jsonToString(normalizedNewConfig));
+        entity.setUpdatedAt(Instant.now());
+        repository.save(entity);
         return true;
     }
 
     public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, String loggingLv) {
         ObjectNode newConfig = objectMapper.createObjectNode();
         
-        // Создаем delays
         ObjectNode delaysNode = objectMapper.createObjectNode();
         if (delays != null) {
             delays.forEach((key, value) -> {
@@ -514,14 +426,13 @@ public class ConfigService {
                     try {
                         delaysNode.put(key, Integer.parseInt(value));
                     } catch (NumberFormatException e) {
-                        delaysNode.put(key, value); // fallback
+                        delaysNode.put(key, value);
                     }
                 }
             });
         }
         newConfig.set("delays", delaysNode);
         
-        // Создаем stringParams
         ObjectNode stringParamsNode = objectMapper.createObjectNode();
         if (stringParams != null) {
             stringParams.forEach((key, value) -> {
@@ -532,11 +443,19 @@ public class ConfigService {
         }
         newConfig.set("stringParams", stringParamsNode);
         
-        // Добавляем loggingLv
         if (loggingLv != null && !loggingLv.isEmpty()) {
             newConfig.put("loggingLv", loggingLv);
         }
         
         return newConfig;
+    }
+
+    @Transactional
+    public void deleteConfig(String systemName) {
+        String sanitizedName = sanitize(systemName);
+        if (!repository.existsBySystemName(sanitizedName)) {
+            throw new IllegalArgumentException("Config not found: " + systemName);
+        }
+        repository.deleteById(sanitizedName); // sanitizedName не может быть null после sanitize()
     }
 }

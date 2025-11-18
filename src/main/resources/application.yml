@@ -1,0 +1,42 @@
+# PostgreSQL Database Configuration
+# После установки PostgreSQL обновите эти настройки
+
+spring:
+  datasource:
+    # URL подключения к базе данных
+    # Формат: jdbc:postgresql://host:port/database_name
+    url: jdbc:postgresql://localhost:5432/mockcontroller
+    # Имя пользователя (по умолчанию postgres)
+    username: postgres
+    # Пароль (установите пароль, который вы указали при установке PostgreSQL)
+    password: q1w2e3r4
+    # Драйвер базы данных
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # ddl-auto: update - автоматически обновляет схему БД при запуске
+      #           validate - только проверяет схему
+      #           create - создает схему при запуске (удаляет существующие данные!)
+      #           create-drop - создает при запуске и удаляет при остановке
+      #           none - ничего не делает
+      ddl-auto: update
+    
+    # Показывать SQL запросы в консоли (для отладки)
+    show-sql: true
+    
+    properties:
+      hibernate:
+        # Форматировать SQL запросы
+        format_sql: true
+        # Диалект базы данных
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Кодировка
+        connection:
+          characterEncoding: UTF-8
+          useUnicode: true
+
+# Server Configuration
+server:
+  port: 8080
+
