@@ -3,6 +3,7 @@
 ## REST API
 
 ### Проверка обновлений
+
 ```bash
 POST /api/configs/checkUpdate
 ```
@@ -223,6 +224,94 @@ curl -X DELETE http://localhost:8080/api/configs/scheduled/550e8400-e29b-41d4-a7
 ```
 
 **Уровни логирования:** ERROR, WARN, INFO, DEBUG
+
+---
+
+## Шаблоны
+
+### Создание шаблона
+```bash
+POST /api/templates
+```
+
+**PowerShell:**
+```powershell
+$body = @{
+    name = "Долгий отклик"
+    systemName = "auth-mock"
+    config = @{
+        delays = @{ loginDelayMs = "5000" }
+        loggingLv = "ERROR"
+    }
+    description = "Шаблон для тестирования"
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/templates" `
+    -Method Post -ContentType "application/json" -Body $body
+```
+
+### Применение шаблона
+```bash
+POST /api/templates/{id}/apply?systemName=auth-mock
+```
+
+### Удаление шаблона
+```bash
+DELETE /api/templates/{id}
+```
+
+**cURL:**
+```bash
+curl -X DELETE http://localhost:8080/api/templates/550e8400-e29b-41d4-a716-446655440000
+```
+
+---
+
+## Сценарии
+
+### Создание сценария
+```bash
+POST /api/scenarios
+```
+
+**PowerShell:**
+```powershell
+$body = @{
+    name = "Сценарий теста"
+    description = "Описание"
+    steps = @(
+        @{ templateId = "template-id-1"; delayMs = 0 }
+        @{ templateId = "template-id-2"; delayMs = 5000 }
+    )
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/scenarios" `
+    -Method Post -ContentType "application/json" -Body $body
+```
+
+### Выполнение сценария
+```bash
+POST /api/scenarios/{id}/execute
+```
+
+### Удаление сценария
+```bash
+DELETE /api/scenarios/{id}
+```
+
+**cURL:**
+```bash
+curl -X DELETE http://localhost:8080/api/scenarios/660e8400-e29b-41d4-a716-446655440001
+```
+
+---
+
+## Веб-интерфейс
+
+- **Главная:** `http://localhost:8080`
+- **Конфиг:** `http://localhost:8080/configs/{systemName}`
+- **Шаблоны:** `http://localhost:8080/templates`
+- **Сценарии:** `http://localhost:8080/scenarios`
 
 ---
 

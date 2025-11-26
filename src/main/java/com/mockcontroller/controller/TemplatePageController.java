@@ -1,0 +1,310 @@
+package com.mockcontroller.controller;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.mockcontroller.model.Template;
+import com.mockcontroller.service.ConfigService;
+import com.mockcontroller.service.TemplateService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+
+@Controller
+public class TemplatePageController {
+
+    private final TemplateService templateService;
+    private final ConfigService configService;
+
+    public TemplatePageController(TemplateService templateService, ConfigService configService) {
+        this.templateService = templateService;
+        this.configService = configService;
+    }
+
+    @GetMapping("/templates")
+    public String templatesPage(@RequestParam(required = false) String system, 
+                                @RequestParam(required = false) String mock, 
+                                Model model) {
+        Collection<Template> allTemplates = templateService.findAll();
+        
+        // Разделяем на правильные (по шаблону) и неправильные
+        Map<String, Map<String, List<Template>>> groupedBySystemAndMock = new HashMap<>();
+        List<Template> invalidTemplates = new ArrayList<>();
+        
+        for (Template template : allTemplates) {
+            String systemName = template.getSystemName();
+            // Проверяем шаблон: название_системы-название_эмуляции-mock
+            if (isValidTemplate(systemName)) {
+                String systemPrefix = extractSystemPrefix(systemName);
+                String mockName = systemName; // Полное имя заглушки для второго уровня
+                
+                groupedBySystemAndMock
+                    .computeIfAbsent(systemPrefix, k -> new HashMap<>())
+                    .computeIfAbsent(mockName, k -> new ArrayList<>())
+                    .add(template);
+            } else {
+                invalidTemplates.add(template);
+            }
+        }
+        
+        // Сортируем неправильные шаблоны по имени
+        invalidTemplates.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        
+        // Сортируем шаблоны внутри каждой заглушки по имени
+        for (Map<String, List<Template>> mocks : groupedBySystemAndMock.values()) {
+            for (List<Template> templates : mocks.values()) {
+                templates.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+            }
+        }
+        
+        // Сортируем системы по алфавиту
+        List<String> systems = new ArrayList<>(groupedBySystemAndMock.keySet());
+        systems.sort(String::compareToIgnoreCase);
+        
+        // Создаем список объектов с системой и количеством для удобного отображения
+        List<SystemInfo> systemsWithCounts = new ArrayList<>();
+        for (String sys : systems) {
+            int totalCount = groupedBySystemAndMock.get(sys).values().stream()
+                .mapToInt(List::size)
+                .sum();
+            systemsWithCounts.add(new SystemInfo(sys, totalCount, false));
+        }
+        
+        // Добавляем "Шаблоны" (неправильные) в список, если они есть
+        if (!invalidTemplates.isEmpty()) {
+            systemsWithCounts.add(new SystemInfo("Шаблоны", invalidTemplates.size(), true));
+        }
+        
+        // Если указана система, фильтруем
+        if (system != null && !system.isEmpty()) {
+            if ("Шаблоны".equals(system)) {
+                // Показываем неправильные шаблоны
+                model.addAttribute("templates", invalidTemplates);
+                model.addAttribute("currentSystem", "Шаблоны");
+                model.addAttribute("currentMock", null);
+                model.addAttribute("mocksWithCounts", new ArrayList<>());
+            } else {
+                Map<String, List<Template>> mocksInSystem = groupedBySystemAndMock.getOrDefault(system, new HashMap<>());
+                
+                // Создаем список заглушек в системе с количеством шаблонов
+                List<MockInfo> mocksWithCounts = new ArrayList<>();
+                List<String> mockNames = new ArrayList<>(mocksInSystem.keySet());
+                mockNames.sort(String::compareToIgnoreCase);
+                for (String mockName : mockNames) {
+                    mocksWithCounts.add(new MockInfo(mockName, mocksInSystem.get(mockName).size()));
+                }
+                model.addAttribute("mocksWithCounts", mocksWithCounts);
+                
+                // Если указана конкретная заглушка, фильтруем по ней
+                if (mock != null && !mock.isEmpty()) {
+                    List<Template> filteredTemplates = mocksInSystem.getOrDefault(mock, new ArrayList<>());
+                    model.addAttribute("templates", filteredTemplates);
+                    model.addAttribute("currentSystem", system);
+                    model.addAttribute("currentMock", mock);
+                } else {
+                    // Показываем первую заглушку по умолчанию
+                    if (!mockNames.isEmpty()) {
+                        String firstMock = mockNames.get(0);
+                        model.addAttribute("templates", mocksInSystem.get(firstMock));
+                        model.addAttribute("currentSystem", system);
+                        model.addAttribute("currentMock", firstMock);
+                    } else {
+                        model.addAttribute("templates", new ArrayList<>());
+                        model.addAttribute("currentSystem", system);
+                        model.addAttribute("currentMock", null);
+                    }
+                }
+            }
+        } else {
+            // Показываем первую систему по умолчанию
+            if (!systems.isEmpty()) {
+                String firstSystem = systems.get(0);
+                Map<String, List<Template>> mocksInSystem = groupedBySystemAndMock.get(firstSystem);
+                List<String> mockNames = new ArrayList<>(mocksInSystem.keySet());
+                mockNames.sort(String::compareToIgnoreCase);
+                
+                // Создаем список заглушек
+                List<MockInfo> mocksWithCounts = new ArrayList<>();
+                for (String mockName : mockNames) {
+                    mocksWithCounts.add(new MockInfo(mockName, mocksInSystem.get(mockName).size()));
+                }
+                model.addAttribute("mocksWithCounts", mocksWithCounts);
+                
+                if (!mockNames.isEmpty()) {
+                    String firstMock = mockNames.get(0);
+                    model.addAttribute("templates", mocksInSystem.get(firstMock));
+                    model.addAttribute("currentSystem", firstSystem);
+                    model.addAttribute("currentMock", firstMock);
+                } else {
+                    model.addAttribute("templates", new ArrayList<>());
+                    model.addAttribute("currentSystem", firstSystem);
+                    model.addAttribute("currentMock", null);
+                }
+            } else if (!invalidTemplates.isEmpty()) {
+                // Если нет правильных систем, но есть неправильные - показываем их
+                model.addAttribute("templates", invalidTemplates);
+                model.addAttribute("currentSystem", "Шаблоны");
+                model.addAttribute("currentMock", null);
+                model.addAttribute("mocksWithCounts", new ArrayList<>());
+            } else {
+                model.addAttribute("templates", new ArrayList<>());
+                model.addAttribute("currentSystem", null);
+                model.addAttribute("currentMock", null);
+                model.addAttribute("mocksWithCounts", new ArrayList<>());
+            }
+        }
+        
+        model.addAttribute("systemsWithCounts", systemsWithCounts);
+        return "templates";
+    }
+    
+    private boolean isValidTemplate(String systemName) {
+        if (systemName == null || systemName.isEmpty()) {
+            return false;
+        }
+        // Шаблон: название_системы-название_эмуляции-mock
+        // Должно быть минимум 2 тире и заканчиваться на -mock
+        int dashCount = 0;
+        for (char c : systemName.toCharArray()) {
+            if (c == '-') {
+                dashCount++;
+            }
+        }
+        return dashCount >= 2 && systemName.endsWith("-mock");
+    }
+    
+    private String extractSystemPrefix(String systemName) {
+        // Берем первое слово до первого тире
+        int firstDashIndex = systemName.indexOf('-');
+        if (firstDashIndex > 0) {
+            return systemName.substring(0, firstDashIndex);
+        }
+        return systemName;
+    }
+    
+    public static class SystemInfo {
+        private final String name;
+        private final int count;
+        private final boolean invalid;
+        
+        public SystemInfo(String name, int count, boolean invalid) {
+            this.name = name;
+            this.count = count;
+            this.invalid = invalid;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        public int getCount() {
+            return count;
+        }
+        
+        public boolean isInvalid() {
+            return invalid;
+        }
+    }
+    
+    public static class MockInfo {
+        private final String name;
+        private final int count;
+        
+        public MockInfo(String name, int count) {
+            this.name = name;
+            this.count = count;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        public int getCount() {
+            return count;
+        }
+    }
+
+    @GetMapping("/templates/{id}")
+    public String templatePage(@PathVariable String id, Model model) {
+        try {
+            Template template = templateService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
+            model.addAttribute("template", template);
+            
+            // Преобразуем JsonNode в Map для удобного отображения в Thymeleaf
+            if (template.getConfig() != null) {
+                JsonNode config = template.getConfig();
+                
+                // Delays
+                Map<String, String> delays = new LinkedHashMap<>();
+                if (config.has("delays") && config.get("delays").isObject()) {
+                    config.get("delays").fields().forEachRemaining(entry -> {
+                        delays.put(entry.getKey(), entry.getValue().asText());
+                    });
+                }
+                model.addAttribute("delays", delays);
+                
+                // String Parameters
+                Map<String, String> stringParams = new LinkedHashMap<>();
+                if (config.has("stringParams") && config.get("stringParams").isObject()) {
+                    config.get("stringParams").fields().forEachRemaining(entry -> {
+                        stringParams.put(entry.getKey(), entry.getValue().asText());
+                    });
+                }
+                model.addAttribute("stringParams", stringParams);
+                
+                // Logging Level
+                String loggingLv = null;
+                if (config.has("loggingLv")) {
+                    loggingLv = config.get("loggingLv").asText();
+                }
+                model.addAttribute("loggingLv", loggingLv);
+            }
+            
+            return "template-detail";
+        } catch (Exception e) {
+            model.addAttribute("error", "Error loading template: " + e.getMessage());
+            return "error";
+        }
+    }
+
+    @PostMapping("/templates/{id}/apply")
+    public String applyTemplate(@PathVariable String id, @RequestParam String systemName) {
+        try {
+            Template template = templateService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Template not found"));
+
+            if (!template.getSystemName().equals(systemName)) {
+                return "redirect:/templates/" + id + "?error=" +
+                       java.net.URLEncoder.encode("Template is for different system", StandardCharsets.UTF_8);
+            }
+
+            configService.updateCurrentConfig(systemName, template.getConfig());
+            return "redirect:/configs/" + java.net.URLEncoder.encode(systemName, StandardCharsets.UTF_8) +
+                   "?info=" + java.net.URLEncoder.encode("Template applied successfully", StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "redirect:/templates/" + id + "?error=" +
+                   java.net.URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+        }
+    }
+
+    @PostMapping("/templates/{id}/delete")
+    public String deleteTemplate(@PathVariable String id) {
+        try {
+            templateService.deleteTemplate(id);
+            return "redirect:/templates?info=" +
+                   java.net.URLEncoder.encode("Шаблон успешно удален", StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return "redirect:/templates?error=" +
+                   java.net.URLEncoder.encode("Шаблон не найден", StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "redirect:/templates?error=" +
+                   java.net.URLEncoder.encode("Ошибка при удалении шаблона: " + e.getMessage(), StandardCharsets.UTF_8);
+        }
+    }
+}
+

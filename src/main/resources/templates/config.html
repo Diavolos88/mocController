@@ -9,7 +9,88 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
             margin: 0;
             padding: 40px 20px;
+            padding-top: 120px;
             background-color: #f5f5f5;
+        }
+        .fixed-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 16px 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .fixed-nav .nav-links {
+            display: flex;
+            gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-link {
+            padding: 14px 28px;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .nav-link.mocks {
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(29, 114, 184, 0.2);
+        }
+        .nav-link.mocks:hover {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
+        }
+        .nav-link.active {
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
+        }
+        .nav-link.active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(29, 114, 184, 0.4);
+        }
+        .nav-link.mocks.active {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.4);
+        }
+        .nav-link.template {
+            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(156, 39, 176, 0.2);
+        }
+        .nav-link.template:hover {
+            background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+        }
+        .nav-link.scenario {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(255, 152, 0, 0.2);
+        }
+        .nav-link.scenario:hover {
+            background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
         }
         .container { 
             max-width: 1000px; 
@@ -201,6 +282,15 @@
             background: #155a94;
             border-color: #155a94;
         }
+        .template { 
+            background: #9c27b0; 
+            color: #fff;
+            border-color: #9c27b0;
+        }
+        .template:hover {
+            background: #7b1fa2;
+            border-color: #7b1fa2;
+        }
         .top-actions {
             display: flex;
             flex-direction: column;
@@ -270,10 +360,111 @@
             margin-bottom: 20px;
             border: 1px solid #90caf9;
         }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .modal h3 {
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+        .modal-form-group {
+            margin-bottom: 16px;
+        }
+        .modal-form-group label {
+            display: block;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .modal-form-group input,
+        .modal-form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .modal-form-group input:focus,
+        .modal-form-group textarea:focus {
+            outline: none;
+            border-color: #1d72b8;
+            box-shadow: 0 0 0 3px rgba(29, 114, 184, 0.1);
+        }
+        .modal-form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        .modal-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .modal-button.confirm {
+            background: #1d72b8;
+            color: white;
+        }
+        .modal-button.confirm:hover {
+            background: #155a94;
+        }
+        .modal-button.cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .modal-button.cancel:hover {
+            background: #d0d0d0;
+        }
     </style>
 </head>
 <body>
-<div class="container">
+<div class="fixed-nav">
+    <div class="nav-links">
+        <a href="/" class="nav-link active">Заглушки</a>
+        <a href="/templates" class="nav-link template">Шаблоны</a>
+        <a href="/scenarios" class="nav-link scenario">Сценарии</a>
+    </div>
+</div>
+
+<div class="container" 
+     th:data-system-name="${systemName}">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        var currentConfigData = /*[[${currentConfigJson}]]*/ {};
+        /*]]>*/
+    </script>
     <a th:href="@{/}" class="back-link">← Назад</a>
     <h1 th:text="${configView.systemName}">mock-name</h1>
     <div class="version" th:if="${configView.configVersion}">
@@ -291,6 +482,7 @@
                 <input type="hidden" name="action" value="revert"/>
                 <button class="revert" type="submit">Вернуть к стартовому</button>
             </form>
+            <button class="template" type="button" id="saveAsTemplateBtn" style="flex: 0.5;">Сохранить как шаблон</button>
         </div>
         <form id="scheduleForm" th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0;">
             <input type="hidden" name="action" value="schedule"/>
@@ -458,6 +650,28 @@
         </section>
     </form>
 </div>
+
+<!-- Модальное окно для сохранения шаблона -->
+<div id="templateModalOverlay" class="modal-overlay">
+    <div class="modal">
+        <h3>Сохранить как шаблон</h3>
+        <form id="templateForm" method="post">
+            <div class="modal-form-group">
+                <label for="templateName">Название шаблона *</label>
+                <input type="text" id="templateName" name="templateName" required placeholder="Например: Долгий отклик" maxlength="255"/>
+            </div>
+            <div class="modal-form-group">
+                <label for="templateDescription">Описание (необязательно)</label>
+                <textarea id="templateDescription" name="templateDescription" placeholder="Описание шаблона..."></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="modal-button cancel" id="cancelTemplateBtn">Отмена</button>
+                <button type="submit" class="modal-button confirm">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Сохраняем исходные значения всех полей
@@ -734,6 +948,135 @@
                     }
                 }
             });
+        }
+
+        // Обработка сохранения как шаблон
+        const saveAsTemplateBtn = document.getElementById('saveAsTemplateBtn');
+        const templateModalOverlay = document.getElementById('templateModalOverlay');
+        const templateForm = document.getElementById('templateForm');
+        const cancelTemplateBtn = document.getElementById('cancelTemplateBtn');
+
+        if (saveAsTemplateBtn && templateModalOverlay) {
+            saveAsTemplateBtn.addEventListener('click', function() {
+                templateModalOverlay.classList.add('show');
+            });
+
+            if (cancelTemplateBtn) {
+                cancelTemplateBtn.addEventListener('click', function() {
+                    templateModalOverlay.classList.remove('show');
+                    templateForm.reset();
+                });
+            }
+
+            // Закрытие по клику вне модального окна
+            templateModalOverlay.addEventListener('click', function(e) {
+                if (e.target === templateModalOverlay) {
+                    templateModalOverlay.classList.remove('show');
+                    templateForm.reset();
+                }
+            });
+
+            // Обработка отправки формы шаблона
+            if (templateForm) {
+                templateForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const templateName = document.getElementById('templateName').value.trim();
+                    if (!templateName) {
+                        alert('Введите название шаблона');
+                        return;
+                    }
+
+                    // Получаем текущие значения из формы конфига (то, что видит пользователь)
+                    const configForm = document.getElementById('configForm');
+                    if (!configForm) {
+                        alert('Ошибка: форма конфига не найдена');
+                        return;
+                    }
+
+                    // Собираем данные конфига из формы (включая все текущие значения)
+                    const formData = new FormData(configForm);
+                    const delays = {};
+                    const stringParams = {};
+                    let loggingLv = null;
+
+                    // Собираем delays
+                    for (const [key, value] of formData.entries()) {
+                        if (key.startsWith('delay_')) {
+                            const delayKey = key.substring(6);
+                            delays[delayKey] = value;
+                        } else if (key.startsWith('string_')) {
+                            const stringKey = key.substring(7);
+                            stringParams[stringKey] = value;
+                        } else if (key === 'loggingLv') {
+                            loggingLv = value;
+                        }
+                    }
+
+                    // Создаем JSON конфига - используем все значения из формы
+                    // Это то, что пользователь видит на экране (включая неизмененные значения)
+                    const config = {};
+                    
+                    // Всегда добавляем delays, даже если пустой объект (если есть поля в форме)
+                    if (Object.keys(delays).length > 0) {
+                        config.delays = delays;
+                    }
+                    
+                    // Всегда добавляем stringParams, даже если пустой объект (если есть поля в форме)
+                    if (Object.keys(stringParams).length > 0) {
+                        config.stringParams = stringParams;
+                    }
+                    
+                    // Добавляем loggingLv, если есть
+                    if (loggingLv) {
+                        config.loggingLv = loggingLv;
+                    }
+                    
+                    // Проверяем, что конфиг не пустой
+                    if (Object.keys(config).length === 0) {
+                        alert('Ошибка: конфигурация пуста. Настройте хотя бы один параметр.');
+                        return;
+                    }
+
+                    // Отправляем запрос на создание шаблона
+                    const container = document.querySelector('.container');
+                    const systemName = container.getAttribute('data-system-name');
+                    const requestBody = {
+                        name: templateName,
+                        systemName: systemName,
+                        config: config,
+                        description: document.getElementById('templateDescription').value.trim() || null
+                    };
+
+                    // Логируем для отладки
+                    console.log('Отправка запроса:', requestBody);
+                    
+                    fetch('/api/templates', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            templateModalOverlay.classList.remove('show');
+                            templateForm.reset();
+                            alert('Шаблон успешно сохранен!');
+                            // Можно обновить страницу или показать сообщение
+                        } else {
+                            return response.text().then(text => {
+                                console.error('Ошибка сервера:', text);
+                                throw new Error(text || 'Ошибка при сохранении шаблона');
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                        alert('Ошибка при сохранении шаблона: ' + error.message);
+                    });
+                });
+            }
         }
     });
 </script>

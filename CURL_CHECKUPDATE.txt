@@ -1,2 +1,0 @@
-curl -X POST http://localhost:8080/api/configs/checkUpdate -H "Content-Type: application/json" -d "{\"SystemName\": \"auth-mock\", \"version\": \"v1\", \"config\": {\"delays\": {\"loginDelayMs\": \"1000\"}, \"stringParams\": {\"mode\": \"normal\"}, \"loggingLv\": \"ERROR\"}}"
-

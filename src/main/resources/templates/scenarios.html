@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Сценарии</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+            margin: 0;
+            padding: 40px 20px;
+            padding-top: 120px;
+            background-color: #f5f5f5;
+        }
+        .fixed-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 16px 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .fixed-nav .nav-links {
+            display: flex;
+            gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: center;
+            justify-content: center;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            padding: 32px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        h1 { margin: 0 0 24px 0; font-size: 28px; color: #333; }
+        .nav-link {
+            padding: 14px 28px;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .nav-link.mocks {
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(29, 114, 184, 0.2);
+        }
+        .nav-link.mocks:hover {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
+        }
+        .nav-link.active {
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
+        }
+        .nav-link.active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(29, 114, 184, 0.4);
+        }
+        .nav-link.mocks.active {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.4);
+        }
+        .nav-link.template {
+            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(156, 39, 176, 0.2);
+        }
+        .nav-link.template:hover {
+            background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+        }
+        .nav-link.scenario {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(255, 152, 0, 0.2);
+        }
+        .nav-link.scenario:hover {
+            background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+        }
+        .nav-link.scenario.active {
+            background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+        }
+        .card {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 16px;
+            background: #fafafa;
+            position: relative;
+        }
+        .card-delete-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            background: #f44336;
+            color: white;
+            transition: all 0.2s;
+        }
+        .card-delete-btn:hover {
+            background: #d32f2f;
+        }
+        .card h2 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .card p {
+            margin: 4px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            color: white;
+            margin-top: 12px;
+            transition: all 0.2s;
+            min-width: 180px;
+            text-align: center;
+        }
+        .btn-view {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .btn-scenario {
+            background: #ff9800;
+            color: white;
+        }
+        .btn-scenario:hover {
+            background: #f57c00;
+        }
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .card-actions {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .card-actions-left {
+            display: flex;
+            gap: 12px;
+        }
+        .card-actions-right {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .btn-apply-now {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-apply-now:hover {
+            background: #45a049;
+        }
+        .schedule-form {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .schedule-inputs {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+        .schedule-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .schedule-input {
+            padding: 8px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 180px;
+        }
+        .schedule-hint {
+            font-size: 11px;
+            color: #666;
+            padding: 0 4px;
+        }
+        .btn-schedule {
+            background: #2196F3;
+            color: white;
+            white-space: nowrap;
+        }
+        .btn-schedule:hover {
+            background: #1976D2;
+        }
+        .btn-delete {
+            background: #f44336;
+            color: white;
+        }
+        .btn-delete:hover {
+            background: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="fixed-nav">
+        <div class="nav-links">
+            <a href="/" class="nav-link mocks">Заглушки</a>
+            <a href="/templates" class="nav-link template">Шаблоны</a>
+            <a href="/scenarios" class="nav-link scenario active">Сценарии</a>
+        </div>
+    </div>
+
+    <h1>Сценарии</h1>
+
+    <div style="margin-bottom: 24px;">
+        <a href="/scenarios/new" class="btn btn-scenario" style="text-decoration: none;">+ Создать сценарий</a>
+    </div>
+
+    <div th:if="${param.info}" style="padding: 12px; background: #e8f5e9; border: 1px solid #4caf50; border-radius: 4px; color: #2e7d32; margin-bottom: 16px;">
+        <span th:text="${param.info[0]}"></span>
+    </div>
+    <div th:if="${param.error}" style="padding: 12px; background: #ffebee; border: 1px solid #f44336; border-radius: 4px; color: #c62828; margin-bottom: 16px;">
+        <span th:text="${param.error[0]}"></span>
+    </div>
+
+    <div th:if="${#lists.isEmpty(scenarios)}" class="empty">
+        <p>Пока нет созданных сценариев. Создайте сценарий через веб-интерфейс или REST API.</p>
+    </div>
+
+    <div th:each="scenario : ${scenarios}" class="card">
+        <form th:action="@{/scenarios/{id}/delete(id=${scenario.id})}" method="post" style="margin: 0; position: absolute; top: 12px; right: 12px;" 
+              th:onsubmit="return confirm('Вы уверены, что хотите удалить этот сценарий?');">
+            <button type="submit" class="card-delete-btn">Удалить</button>
+        </form>
+        <h2 th:text="${scenario.name}">Scenario Name</h2>
+        <p th:if="${scenario.description}" th:text="${scenario.description}">Description</p>
+        <p><strong>Шагов:</strong> <span th:text="${#lists.size(scenario.steps)}">0</span></p>
+        <div class="card-actions">
+            <div class="card-actions-left">
+                <a th:href="@{/scenarios/{id}(id=${scenario.id})}" class="btn btn-scenario btn-view">Просмотр</a>
+            </div>
+            <div class="card-actions-right">
+                <form th:action="@{/scenarios/{id}/execute(id=${scenario.id})}" method="post" style="margin: 0;">
+                    <button type="submit" class="btn btn-apply-now">Применить сейчас</button>
+                </form>
+                <form th:action="@{/scenarios/{id}/execute-scheduled(id=${scenario.id})}" 
+                      method="post" 
+                      class="schedule-form"
+                      th:onsubmit="return validateScheduleForm(this, event)">
+                    <button type="submit" class="btn btn-schedule">Применить с задержкой</button>
+                    <div class="schedule-inputs">
+                        <div class="schedule-input-group">
+                            <input type="text" 
+                                   name="scheduledDateTime" 
+                                   th:id="'scheduledDateTime_' + ${scenario.id}"
+                                   placeholder="hh:mm:ss DD-MM-YYYY" 
+                                   pattern="\d{2}:\d{2}:\d{2} \d{2}-\d{2}-\d{4}"
+                                   maxlength="19"
+                                   class="schedule-input"
+                                   title="Введите только цифры в формате: hh:mm:ss DD-MM-YYYY"/>
+                            <div class="schedule-hint">
+                                Формат: <strong>hh:mm:ss DD-MM-YYYY</strong>
+                            </div>
+                        </div>
+                        <div class="schedule-input-group">
+                            <input type="text" 
+                                   name="scheduleComment" 
+                                   th:id="'scheduleComment_' + ${scenario.id}"
+                                   placeholder="Комментарий (необязательно)" 
+                                   maxlength="50"
+                                   class="schedule-input"
+                                   style="width: 200px;"/>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // Маска для ввода даты и времени
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInputs = document.querySelectorAll('input[name="scheduledDateTime"]');
+        dateInputs.forEach(input => {
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 14) value = value.substring(0, 14);
+                
+                let formatted = '';
+                if (value.length > 0) {
+                    formatted = value.substring(0, 2);
+                    if (value.length > 2) {
+                        formatted += ':' + value.substring(2, 4);
+                        if (value.length > 4) {
+                            formatted += ':' + value.substring(4, 6);
+                            if (value.length > 6) {
+                                formatted += ' ' + value.substring(6, 8);
+                                if (value.length > 8) {
+                                    formatted += '-' + value.substring(8, 10);
+                                    if (value.length > 10) {
+                                        formatted += '-' + value.substring(10, 14);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                e.target.value = formatted;
+            });
+        });
+    });
+
+    function validateScheduleForm(form, event) {
+        const dateTimeInput = form.querySelector('input[name="scheduledDateTime"]');
+        const dateTimeValue = dateTimeInput.value.trim();
+        
+        if (!dateTimeValue) {
+            alert('Введите дату и время для отложенного применения');
+            event.preventDefault();
+            return false;
+        }
+        
+        // Проверка формата
+        const pattern = /^\d{2}:\d{2}:\d{2} \d{2}-\d{2}-\d{4}$/;
+        if (!pattern.test(dateTimeValue)) {
+            alert('Некорректный формат даты и времени. Используйте формат: hh:mm:ss DD-MM-YYYY');
+            event.preventDefault();
+            return false;
+        }
+        
+        // Проверка валидности даты
+        const [timePart, datePart] = dateTimeValue.split(' ');
+        const [hours, minutes, seconds] = timePart.split(':').map(Number);
+        const [day, month, year] = datePart.split('-').map(Number);
+        
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
+            alert('Некорректное время. Часы: 00-23, минуты и секунды: 00-59');
+            event.preventDefault();
+            return false;
+        }
+        
+        const date = new Date(year, month - 1, day);
+        if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+            alert('Некорректная дата');
+            event.preventDefault();
+            return false;
+        }
+        
+        // Проверка, что дата не в прошлом
+        const scheduledDate = new Date(year, month - 1, day, hours, minutes, seconds);
+        if (scheduledDate < new Date()) {
+            alert('Нельзя запланировать сценарий на прошедшее время');
+            event.preventDefault();
+            return false;
+        }
+        
+        return true;
+    }
+    /*]]>*/
+</script>
+</body>
+</html>
+

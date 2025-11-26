@@ -173,6 +173,14 @@ public class ConfigPageController {
             model.addAttribute("configView", configView);
             model.addAttribute("systemName", decodedName);
             
+            // Добавляем текущий конфиг как JSON строку для использования в JavaScript
+            try {
+                String currentConfigJson = configService.toPrettyJson(config.getCurrentConfig());
+                model.addAttribute("currentConfigJson", currentConfigJson);
+            } catch (Exception e) {
+                model.addAttribute("currentConfigJson", "{}");
+            }
+            
             // Получаем все запланированные обновления и форматируем даты
             List<ScheduledConfigUpdate> scheduledUpdates = scheduledConfigService.getScheduledUpdates(decodedName);
             Map<String, String> formattedScheduledTimes = new HashMap<>();

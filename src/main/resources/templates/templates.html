@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Шаблоны</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+            margin: 0;
+            padding: 40px 20px;
+            padding-top: 120px;
+            background-color: #f5f5f5;
+        }
+        .fixed-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 16px 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .fixed-nav .nav-links {
+            display: flex;
+            gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: center;
+            justify-content: center;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            padding: 32px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        h1 { 
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+        }
+        .nav-link {
+            padding: 14px 28px;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .nav-link.mocks {
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(29, 114, 184, 0.2);
+        }
+        .nav-link.mocks:hover {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
+        }
+        .nav-link.active {
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
+        }
+        .nav-link.active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(29, 114, 184, 0.4);
+        }
+        .nav-link.mocks.active {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.4);
+        }
+        .nav-link.template {
+            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(156, 39, 176, 0.2);
+        }
+        .nav-link.template:hover {
+            background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+        }
+        .nav-link.template.active {
+            background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.4);
+        }
+        .nav-link.scenario {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(255, 152, 0, 0.2);
+        }
+        .nav-link.scenario:hover {
+            background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+        }
+        .nav-link.scenario.active {
+            background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+        }
+        .card {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 16px;
+            background: #fafafa;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-color: #1d72b8;
+        }
+        .card-delete-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            background: #f44336;
+            color: white;
+            transition: all 0.2s;
+        }
+        .card-delete-btn:hover {
+            background: #d32f2f;
+        }
+        .card h2 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .card p {
+            margin: 4px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .card-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #1d72b8;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #155a94;
+        }
+        .btn-template {
+            background: #9c27b0;
+            color: white;
+        }
+        .btn-template:hover {
+            background: #7b1fa2;
+        }
+        .btn-delete {
+            background: #f44336;
+            color: white;
+        }
+        .btn-delete:hover {
+            background: #d32f2f;
+        }
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .system-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .system-tab {
+            padding: 8px 16px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            background: #fafafa;
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .system-tab:hover {
+            background: #e8f4fd;
+            border-color: #9c27b0;
+            color: #9c27b0;
+        }
+        .system-tab.active {
+            background: #9c27b0;
+            border-color: #9c27b0;
+            color: white;
+        }
+        .system-tab.invalid {
+            border-color: #ff9800;
+        }
+        .system-tab.invalid.active {
+            background: #ff9800;
+            border-color: #ff9800;
+            color: white;
+        }
+        .system-tab.invalid:hover {
+            background: #ffb74d;
+            border-color: #ff9800;
+            color: white;
+        }
+        .system-tab-count {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            background: rgba(255, 255, 255, 0.3);
+            color: inherit;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .system-tab.active .system-tab-count {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        .system-tab.invalid .system-tab-count {
+            background: #f44336;
+            color: white;
+        }
+        .system-tab.invalid.active .system-tab-count {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        .mock-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+            margin-top: 16px;
+        }
+        .mock-tab {
+            padding: 6px 14px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            background: #fafafa;
+            color: #666;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .mock-tab:hover {
+            background: #e8f4fd;
+            border-color: #9c27b0;
+            color: #9c27b0;
+        }
+        .mock-tab.active {
+            background: #9c27b0;
+            border-color: #9c27b0;
+            color: white;
+        }
+        .mock-tab-count {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.3);
+            color: inherit;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .mock-tab.active .mock-tab-count {
+            background: rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="fixed-nav">
+        <div class="nav-links">
+            <a href="/" class="nav-link mocks">Заглушки</a>
+            <a href="/templates" class="nav-link template active">Шаблоны</a>
+            <a href="/scenarios" class="nav-link scenario">Сценарии</a>
+        </div>
+    </div>
+
+    <div class="header-actions">
+        <h1>Шаблоны конфигураций</h1>
+    </div>
+
+    <div th:if="${systemsWithCounts != null && !systemsWithCounts.isEmpty()}" class="system-tabs">
+        <a th:each="sysInfo : ${systemsWithCounts}" 
+           th:href="@{/templates(system=${sysInfo.name})}"
+           th:class="${currentSystem == sysInfo.name ? (sysInfo.invalid ? 'system-tab invalid active' : 'system-tab active') : (sysInfo.invalid ? 'system-tab invalid' : 'system-tab')}">
+            <span th:text="${sysInfo.name}">system</span>
+            <span class="system-tab-count" th:text="${sysInfo.count}">0</span>
+        </a>
+    </div>
+
+    <!-- Вкладки второго уровня для выбора конкретной заглушки -->
+    <div th:if="${mocksWithCounts != null && !mocksWithCounts.isEmpty() && currentSystem != null && currentSystem != 'Шаблоны'}" class="mock-tabs">
+        <a th:each="mockInfo : ${mocksWithCounts}" 
+           th:href="@{/templates(system=${currentSystem}, mock=${mockInfo.name})}"
+           th:class="${currentMock == mockInfo.name ? 'mock-tab active' : 'mock-tab'}">
+            <span th:text="${mockInfo.name}">mock-name</span>
+            <span class="mock-tab-count" th:text="${mockInfo.count}">0</span>
+        </a>
+    </div>
+
+    <div th:if="${#lists.isEmpty(templates)}" class="empty">
+        <p th:if="${currentSystem != null}">Нет шаблонов для системы "<span th:text="${currentSystem}"></span>"</p>
+        <p th:if="${currentSystem == null}">Пока нет созданных шаблонов. Создайте шаблон через REST API или веб-интерфейс.</p>
+    </div>
+
+    <div th:each="template : ${templates}" class="card">
+        <form th:action="@{/templates/{id}/delete(id=${template.id})}" method="post" style="margin: 0; position: absolute; top: 12px; right: 12px;" 
+              th:onsubmit="return confirm('Вы уверены, что хотите удалить этот шаблон?');">
+            <button type="submit" class="card-delete-btn">Удалить</button>
+        </form>
+        <h2 th:text="${template.name}">Template Name</h2>
+        <p><strong>Система:</strong> <span th:text="${template.systemName}">system-name</span></p>
+        <p th:if="${template.description}" th:text="${template.description}">Description</p>
+        <div class="card-actions">
+            <a th:href="@{/templates/{id}(id=${template.id})}" class="btn btn-template">Просмотр</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+

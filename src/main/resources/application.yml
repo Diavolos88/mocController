@@ -4,12 +4,13 @@
 spring:
   datasource:
     # URL подключения к базе данных
-    # Формат: jdbc:postgresql://host:port/database_name
+    # Формат: jdbc:postgresql://host:port/database_name?currentSchema=schema_name
     url: jdbc:postgresql://localhost:5432/mockcontroller
-    # Имя пользователя (по умолчанию postgres)
+    # Имя пользователя
     username: postgres
-    # Пароль (установите пароль, который вы указали при установке PostgreSQL)
-    password: q1w2e3r4
+    # Пароль (загружается из OpenShift секрета dbpassword или переменной окружения DB_PASSWORD)
+    # Для локальной разработки используется значение по умолчанию q1w2e3r4
+    password: ${DB_PASSWORD:q1w2e3r4}
     # Драйвер базы данных
     driver-class-name: org.postgresql.Driver
 

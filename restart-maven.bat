@@ -9,6 +9,8 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8080 ^| findstr LISTENING') 
 )
 timeout /t 2 /nobreak >nul
 echo.
-echo Запускаю сервис заново...
+echo Запускаю сервис через Maven...
+REM Установите правильный пароль от БД здесь, если нужно
+set DB_PASSWORD=q1w2e3r4
 "%M2_HOME%\bin\mvn.cmd" spring-boot:run
 

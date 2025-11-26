@@ -42,16 +42,14 @@ public class ScheduledConfigService {
 
     @Transactional
     public ScheduledConfigUpdate scheduleUpdate(String systemName, JsonNode newConfig, LocalDateTime scheduledTime, String comment) {
+        String safeSystemName = systemName != null ? systemName : "";
         ScheduledConfigUpdateEntity entity = new ScheduledConfigUpdateEntity(
-            systemName != null ? systemName : "", 
+            safeSystemName, 
             jsonToString(newConfig), 
             scheduledTime, 
             comment);
         entity = repository.save(entity);
-        ScheduledConfigUpdate update = mapper.toModel(entity);
-        logger.info("Scheduled config update for {} at {} (id: {}, comment: {})", 
-            systemName, scheduledTime, update.getId() != null ? update.getId() : "unknown", comment);
-        return update;
+        return mapper.toModel(entity);
     }
 
     public boolean hasScheduledUpdate(String systemName) {
@@ -74,7 +72,6 @@ public class ScheduledConfigService {
     public void cancelScheduledUpdate(String updateId) {
         if (updateId != null && repository.existsById(updateId)) {
             repository.deleteById(updateId);
-            logger.info("Cancelled scheduled update {}", updateId);
         }
     }
 
@@ -87,16 +84,11 @@ public class ScheduledConfigService {
         for (ScheduledConfigUpdateEntity entity : dueUpdates) {
             ScheduledConfigUpdate update = mapper.toModel(entity);
             try {
-                String updateId = update.getId() != null ? update.getId() : "unknown";
                 String systemName = update.getSystemName() != null ? update.getSystemName() : "unknown";
-                logger.info("Applying scheduled update {} for {} at {}", 
-                    updateId, systemName, now);
                 configService.updateCurrentConfig(systemName, update.getNewConfig());
                 if (update.getId() != null) {
                     repository.deleteById(update.getId());
                 }
-                logger.info("Successfully applied scheduled update {} for {}", 
-                    updateId, systemName);
             } catch (Exception e) {
                 String updateId = update.getId() != null ? update.getId() : "unknown";
                 String systemName = update.getSystemName() != null ? update.getSystemName() : "unknown";
@@ -109,7 +101,6 @@ public class ScheduledConfigService {
     @Transactional
     public void deleteAllBySystemName(String systemName) {
         repository.deleteBySystemName(systemName);
-        logger.info("Deleted all scheduled updates for {}", systemName);
     }
 
     private String jsonToString(JsonNode jsonNode) {
