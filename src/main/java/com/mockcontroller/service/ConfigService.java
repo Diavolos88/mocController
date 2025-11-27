@@ -474,7 +474,7 @@ public class ConfigService {
     }
 
     /**
-     * Валидирует конфигурацию: delays должны быть числовыми и неотрицательными
+     * Валидирует конфигурацию: delays должны быть числовыми и неотрицательными, intParams - целыми числами
      */
     public void validateConfig(JsonNode config) {
         if (config == null) {
@@ -496,6 +496,20 @@ public class ConfigService {
                 }
             });
         }
+        
+        if (config.has("intParams") && config.get("intParams").isObject()) {
+            config.get("intParams").fields().forEachRemaining(entry -> {
+                String key = entry.getKey();
+                JsonNode valueNode = entry.getValue();
+                
+                if (!valueNode.isNumber() || !valueNode.isInt()) {
+                    throw new IllegalArgumentException("Значение целочисленного параметра '" + key + "' должно быть целым числом");
+                }
+            });
+        }
+        
+        // stringParams не требуют специфической валидации, так как могут быть любыми строками
+        // loggingLv валидируется на уровне UI и при парсинге в enum
     }
 
     public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, Map<String, String> intParams, String loggingLv) {
