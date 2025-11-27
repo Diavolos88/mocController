@@ -253,3 +253,54 @@ body.dark-theme .loading-text {
     color: white;
 }
 
+/* Стили для шагов сценария */
+body.dark-theme .step {
+    background: #252525;
+    border-color: #404040;
+}
+
+body.dark-theme .step-number {
+    color: #64b5f6;
+}
+
+body.dark-theme .step-delay {
+    color: #999;
+}
+
+body.dark-theme .step-time {
+    color: #ffb74d;
+}
+
+body.dark-theme .step-templates {
+    color: #e0e0e0;
+}
+
+body.dark-theme .step-templates strong {
+    color: #e0e0e0;
+}
+
+body.dark-theme .step-templates li {
+    color: #e0e0e0;
+}
+
+body.dark-theme .step-templates ul {
+    color: #e0e0e0;
+}
+
+body.dark-theme .info {
+    color: #999;
+}
+
+body.dark-theme .info strong {
+    color: #e0e0e0;
+}
+
+body.dark-theme .api-example {
+    background: #252525;
+    border-color: #404040;
+}
+
+body.dark-theme .api-example h3 {
+    color: #e0e0e0;
+}
+
