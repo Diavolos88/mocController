@@ -360,6 +360,13 @@ public class ConfigPageController {
                 }
             });
             
+            Map<String, String> intParams = new HashMap<>();
+            allParams.forEach((key, value) -> {
+                if (key.startsWith("int_")) {
+                    intParams.put(key.substring(4), value);
+                }
+            });
+            
             String loggingLv = allParams.get("loggingLv");
             
             // Извлекаем комментарий
@@ -372,7 +379,7 @@ public class ConfigPageController {
             }
             
             // Создаем конфиг из параметров формы
-            JsonNode newConfig = configService.createConfigFromForm(delays, stringParams, loggingLv);
+            JsonNode newConfig = configService.createConfigFromForm(delays, stringParams, intParams, loggingLv);
             
             // Планируем обновление
             scheduledConfigService.scheduleUpdate(decodedName, newConfig, scheduledTime, comment);

@@ -1032,7 +1032,7 @@
             updateChangedStyle(input);
         });
 
-        // Функция валидации delays
+        // Функция валидации delays и intParams
         function validateDelays(formData) {
             const errors = [];
             for (const [key, value] of formData.entries()) {
@@ -1042,6 +1042,15 @@
                         if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 0) {
                             const fieldName = key.substring(6);
                             errors.push(`Поле "${fieldName}" должно быть целым неотрицательным числом`);
+                        }
+                    }
+                }
+                if (key.startsWith('int_')) {
+                    if (value && value.trim() !== '') {
+                        const numValue = Number(value);
+                        if (isNaN(numValue) || !Number.isInteger(numValue)) {
+                            const fieldName = key.substring(4);
+                            errors.push(`Поле "${fieldName}" должно быть целым числом`);
                         }
                     }
                 }
@@ -1531,6 +1540,18 @@
             if (templateConfig.stringParams) {
                 for (const [key, value] of Object.entries(templateConfig.stringParams)) {
                     const input = document.querySelector(`input[name="string_${key}"]`);
+                    if (input) {
+                        input.value = value;
+                        input.classList.add('changed');
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
+            }
+            
+            // Применяем intParams
+            if (templateConfig.intParams) {
+                for (const [key, value] of Object.entries(templateConfig.intParams)) {
+                    const input = document.querySelector(`input[name="int_${key}"]`);
                     if (input) {
                         input.value = value;
                         input.classList.add('changed');
