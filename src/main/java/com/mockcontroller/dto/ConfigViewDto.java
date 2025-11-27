@@ -9,6 +9,7 @@ public class ConfigViewDto {
     private List<ConfigParamDto> delays = new ArrayList<>();
     private List<ConfigParamDto> stringParams = new ArrayList<>();
     private List<ConfigParamDto> intParams = new ArrayList<>();
+    private List<ConfigParamDto> booleanVariables = new ArrayList<>();
     private ConfigParamDto loggingLevel;
 
     public ConfigViewDto() {
@@ -52,6 +53,14 @@ public class ConfigViewDto {
 
     public void setIntParams(List<ConfigParamDto> intParams) {
         this.intParams = intParams;
+    }
+
+    public List<ConfigParamDto> getBooleanVariables() {
+        return booleanVariables;
+    }
+
+    public void setBooleanVariables(List<ConfigParamDto> booleanVariables) {
+        this.booleanVariables = booleanVariables;
     }
 
     public ConfigParamDto getLoggingLevel() {

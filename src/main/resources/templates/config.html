@@ -974,6 +974,28 @@
             </div>
         </section>
 
+        <!-- Boolean Variables -->
+        <section th:if="${!configView.booleanVariables.isEmpty()}">
+            <h2>Булевы переменные</h2>
+            <div th:each="boolVar : ${configView.booleanVariables}" class="param-group">
+                <label class="param-label" th:text="${boolVar.key}">boolean_key</label>
+                <select class="param-select"
+                        th:name="'boolean_' + ${boolVar.key}"
+                        th:id="'boolean_' + ${boolVar.key}"
+                        required>
+                    <option value="true" th:selected="${boolVar.value == 'true'}">true</option>
+                    <option value="false" th:selected="${boolVar.value == 'false'}">false</option>
+                </select>
+                <div th:if="${boolVar.startValue != null && boolVar.startValue != boolVar.value}" 
+                     class="start-value" 
+                     th:data-target-id="'boolean_' + ${boolVar.key}"
+                     th:data-start-value="${boolVar.startValue}">
+                    <span class="start-value-label">Стартовое:</span>
+                    <span th:text="${boolVar.startValue}">false</span>
+                </div>
+            </div>
+        </section>
+
         <section th:if="${!configView.stringParams.isEmpty()}">
             <h2>Строковые параметры</h2>
             <div th:each="stringParam : ${configView.stringParams}" class="param-group">
@@ -1598,6 +1620,19 @@
                         input.value = value;
                         input.classList.add('changed');
                         input.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
+            }
+            
+            // Применяем booleanVariables
+            if (templateConfig.booleanVariables) {
+                for (const [key, value] of Object.entries(templateConfig.booleanVariables)) {
+                    const select = document.querySelector(`select[name="boolean_${key}"]`);
+                    if (select) {
+                        const boolValue = value === true || value === "true" ? "true" : "false";
+                        select.value = boolValue;
+                        select.classList.add('changed');
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 }
             }

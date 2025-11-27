@@ -387,6 +387,25 @@ public class ConfigService {
             });
         }
         
+        JsonNode currentBooleanVariables = current.get("booleanVariables");
+        JsonNode startBooleanVariables = start != null ? start.get("booleanVariables") : null;
+        if (currentBooleanVariables != null && currentBooleanVariables.isObject()) {
+            currentBooleanVariables.fields().forEachRemaining(entry -> {
+                ConfigParamDto param = new ConfigParamDto();
+                param.setKey(entry.getKey());
+                param.setValue(entry.getValue().asText());
+                param.setType("boolean");
+                
+                if (startBooleanVariables != null && startBooleanVariables.has(entry.getKey())) {
+                    param.setStartValue(startBooleanVariables.get(entry.getKey()).asText());
+                } else {
+                    param.setStartValue(entry.getValue().asText());
+                }
+                
+                dto.getBooleanVariables().add(param);
+            });
+        }
+        
         JsonNode currentLogging = current.get("loggingLv");
         JsonNode startLogging = start != null ? start.get("loggingLv") : null;
         if (currentLogging != null) {
@@ -409,13 +428,13 @@ public class ConfigService {
 
     @Transactional
     public boolean updateConfigFromForm(String systemName, Map<String, String> delays, 
-                                        Map<String, String> stringParams, Map<String, String> intParams, String loggingLv) {
+                                        Map<String, String> stringParams, Map<String, String> intParams, Map<String, String> booleanVariables, String loggingLv) {
         StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
                 .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
         StoredConfig stored = mapper.toModel(entity);
         
-        JsonNode newConfig = createConfigFromForm(delays, stringParams, intParams, loggingLv);
+        JsonNode newConfig = createConfigFromForm(delays, stringParams, intParams, booleanVariables, loggingLv);
         
         // Валидируем созданный конфиг
         validateConfig(newConfig);
@@ -492,16 +511,35 @@ public class ConfigService {
             });
         }
         
+        if (config.has("booleanVariables") && config.get("booleanVariables").isObject()) {
+            config.get("booleanVariables").fields().forEachRemaining(entry -> {
+                String key = entry.getKey();
+                JsonNode valueNode = entry.getValue();
+                
+                if (valueNode.isBoolean()) {
+                    // Значение уже булево - все хорошо
+                } else if (valueNode.isTextual()) {
+                    String textValue = valueNode.asText().toLowerCase().trim();
+                    if (!"true".equals(textValue) && !"false".equals(textValue)) {
+                        throw new IllegalArgumentException("Значение булевой переменной '" + key + "' должно быть 'true' или 'false', получено: " + valueNode.asText());
+                    }
+                } else {
+                    throw new IllegalArgumentException("Значение булевой переменной '" + key + "' должно быть булевым значением или строкой 'true'/'false'");
+                }
+            });
+        }
+        
         // stringParams не требуют специфической валидации, так как могут быть любыми строками
         // loggingLv валидируется на уровне UI и при парсинге в enum
     }
 
-    public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, Map<String, String> intParams, String loggingLv) {
+    public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, Map<String, String> intParams, Map<String, String> booleanVariables, String loggingLv) {
         ObjectNode newConfig = objectMapper.createObjectNode();
         
         newConfig.set("delays", createDelaysNode(delays));
         newConfig.set("stringParams", createStringParamsNode(stringParams));
         newConfig.set("intParams", createIntParamsNode(intParams));
+        newConfig.set("booleanVariables", createBooleanVariablesNode(booleanVariables));
         
         if (loggingLv != null && !loggingLv.isEmpty()) {
             newConfig.put("loggingLv", loggingLv);
@@ -566,6 +604,26 @@ public class ConfigService {
             });
         }
         return intParamsNode;
+    }
+    
+    /**
+     * Создает узел booleanVariables из Map
+     */
+    private ObjectNode createBooleanVariablesNode(Map<String, String> booleanVariables) {
+        ObjectNode booleanVariablesNode = objectMapper.createObjectNode();
+        if (booleanVariables != null) {
+            booleanVariables.forEach((key, value) -> {
+                if (value != null && !value.isEmpty()) {
+                    String lowerValue = value.toLowerCase().trim();
+                    if ("true".equals(lowerValue) || "false".equals(lowerValue)) {
+                        booleanVariablesNode.put(key, Boolean.parseBoolean(lowerValue));
+                    } else {
+                        throw new IllegalArgumentException("Значение булевой переменной '" + key + "' должно быть 'true' или 'false', получено: " + value);
+                    }
+                }
+            });
+        }
+        return booleanVariablesNode;
     }
 
     @Transactional

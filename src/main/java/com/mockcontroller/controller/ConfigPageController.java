@@ -249,11 +249,19 @@ public class ConfigPageController {
                 }
             });
             
+            // Извлекаем booleanVariables
+            Map<String, String> booleanVariables = new HashMap<>();
+            allParams.forEach((key, value) -> {
+                if (key.startsWith("boolean_")) {
+                    booleanVariables.put(key.substring(8), value);
+                }
+            });
+            
             // Извлекаем loggingLv
             String loggingLv = allParams.get("loggingLv");
             
             try {
-                boolean hasChanges = configService.updateConfigFromForm(decodedName, delays, stringParams, intParams, loggingLv);
+                boolean hasChanges = configService.updateConfigFromForm(decodedName, delays, stringParams, intParams, booleanVariables, loggingLv);
                 if (!hasChanges) {
                     return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + 
                            "?info=" + java.net.URLEncoder.encode("Изменений не было, конфиг не обновлен", StandardCharsets.UTF_8);
@@ -375,6 +383,14 @@ public class ConfigPageController {
                 }
             });
             
+            // Извлекаем booleanVariables
+            Map<String, String> booleanVariables = new HashMap<>();
+            allParams.forEach((key, value) -> {
+                if (key.startsWith("boolean_")) {
+                    booleanVariables.put(key.substring(8), value);
+                }
+            });
+            
             String loggingLv = allParams.get("loggingLv");
             
             // Извлекаем комментарий
@@ -387,7 +403,7 @@ public class ConfigPageController {
             }
             
             // Создаем конфиг из параметров формы
-            JsonNode newConfig = configService.createConfigFromForm(delays, stringParams, intParams, loggingLv);
+            JsonNode newConfig = configService.createConfigFromForm(delays, stringParams, intParams, booleanVariables, loggingLv);
             
             // Планируем обновление
             scheduledConfigService.scheduleUpdate(decodedName, newConfig, scheduledTime, comment);
