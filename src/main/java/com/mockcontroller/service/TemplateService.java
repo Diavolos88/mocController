@@ -21,11 +21,13 @@ public class TemplateService {
     private final TemplateRepository repository;
     private final TemplateMapper mapper;
     private final ObjectMapper objectMapper;
+    private final ConfigService configService;
 
-    public TemplateService(TemplateRepository repository, TemplateMapper mapper, ObjectMapper objectMapper) {
+    public TemplateService(TemplateRepository repository, TemplateMapper mapper, ObjectMapper objectMapper, ConfigService configService) {
         this.repository = repository;
         this.mapper = mapper;
         this.objectMapper = objectMapper;
+        this.configService = configService;
     }
 
     public Collection<Template> findAll() {
@@ -60,6 +62,11 @@ public class TemplateService {
 
     @Transactional
     public Template updateTemplate(String id, String name, JsonNode config, String description) {
+        // Валидируем конфиг перед обновлением шаблона
+        if (config != null) {
+            configService.validateConfig(config);
+        }
+        
         TemplateEntity entity = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
 
