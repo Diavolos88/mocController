@@ -388,7 +388,7 @@ public class ConfigService {
 
     @Transactional
     public boolean updateConfigFromForm(String systemName, Map<String, String> delays, 
-                                        Map<String, String> stringParams, String loggingLv) {
+                                        Map<String, String> stringParams, Map<String, String> intParams, String loggingLv) {
         StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
                 .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
