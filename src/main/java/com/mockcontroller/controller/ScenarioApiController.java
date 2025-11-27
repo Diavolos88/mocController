@@ -3,6 +3,7 @@ package com.mockcontroller.controller;
 import com.mockcontroller.model.Scenario;
 import com.mockcontroller.model.ScenarioRequest;
 import com.mockcontroller.model.ScenarioStep;
+import com.mockcontroller.service.GroupService;
 import com.mockcontroller.service.ScenarioService;
 import com.mockcontroller.service.ScheduledConfigService;
 import org.slf4j.Logger;
@@ -26,11 +27,14 @@ public class ScenarioApiController {
 
     private final ScenarioService scenarioService;
     private final ScheduledConfigService scheduledConfigService;
+    private final GroupService groupService;
 
     public ScenarioApiController(ScenarioService scenarioService,
-                                  ScheduledConfigService scheduledConfigService) {
+                                  ScheduledConfigService scheduledConfigService,
+                                  GroupService groupService) {
         this.scenarioService = scenarioService;
         this.scheduledConfigService = scheduledConfigService;
+        this.groupService = groupService;
     }
 
     @GetMapping
@@ -136,6 +140,94 @@ public class ScenarioApiController {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/execute")
+    public ResponseEntity<?> executeScenarioByGroupAndName(
+            @RequestParam String group,
+            @RequestParam String name,
+            @RequestParam String startTime) {
+        try {
+            // Парсим время начала
+            LocalDateTime startDateTime;
+            try {
+                startDateTime = LocalDateTime.parse(startTime, DATE_TIME_FORMATTER);
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Неверный формат времени. Используйте: HH:mm:ss dd-MM-yyyy");
+            }
+
+            // Проверяем, что время не в прошлом
+            if (startDateTime.isBefore(LocalDateTime.now())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Время начала не может быть в прошлом");
+            }
+
+            // Ищем группу по ID или названию
+            String groupId = group;
+            // Если group не похож на UUID, пытаемся найти группу по названию
+            if (!group.matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")) {
+                // Это название группы, нужно найти ID
+                groupId = groupService.findAll().stream()
+                        .filter(g -> g.getName().equalsIgnoreCase(group))
+                        .findFirst()
+                        .map(g -> g.getId())
+                        .orElse(null);
+                
+                if (groupId == null) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body("Группа с названием '" + group + "' не найдена. Используйте /api/groups для получения списка групп.");
+                }
+            }
+
+            // Ищем сценарий по groupId и name
+            Scenario scenario = scenarioService.findByGroupIdAndName(groupId, name)
+                    .orElseThrow(() -> new IllegalArgumentException("Сценарий не найден"));
+
+            // Применяем шаги сценария относительно времени начала
+            for (ScenarioStep step : scenario.getSteps()) {
+                if (step.getTemplate() == null) {
+                    continue;
+                }
+
+                LocalDateTime scheduledTime;
+
+                if (step.getScheduledTime() != null) {
+                    // Если у шага есть scheduledTime, извлекаем относительное время (HH:mm)
+                    LocalDateTime stepTime = LocalDateTime.ofInstant(step.getScheduledTime(), 
+                            java.time.ZoneId.systemDefault());
+                    int hours = stepTime.getHour();
+                    int minutes = stepTime.getMinute();
+                    // Вычисляем абсолютное время: startDateTime + относительное время
+                    scheduledTime = startDateTime.plusHours(hours).plusMinutes(minutes);
+                } else {
+                    // Используем delayMs относительно startDateTime
+                    long delaySeconds = step.getDelayMs() / 1000;
+                    scheduledTime = startDateTime.plusSeconds(delaySeconds);
+                }
+
+                // Убеждаемся, что время не в прошлом
+                if (scheduledTime.isBefore(LocalDateTime.now())) {
+                    scheduledTime = LocalDateTime.now().plusSeconds(1);
+                }
+
+                // Применяем шаблон через запланированное обновление
+                scheduledConfigService.scheduleUpdate(
+                        step.getTemplate().getSystemName(),
+                        step.getTemplate().getConfig(),
+                        scheduledTime,
+                        "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")"
+                );
+            }
+
+            return ResponseEntity.ok("Сценарий '" + scenario.getName() + "' успешно запланирован на " + startTime);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("Ошибка при выполнении сценария", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Ошибка при выполнении сценария: " + e.getMessage());
         }
     }
 

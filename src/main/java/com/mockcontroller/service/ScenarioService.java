@@ -55,6 +55,14 @@ public class ScenarioService {
         });
     }
 
+    public Optional<Scenario> findByGroupIdAndName(String groupId, String name) {
+        return scenarioRepository.findByGroupIdAndName(groupId, name).map(entity -> {
+            Scenario scenario = mapper.toModel(entity);
+            loadSteps(scenario);
+            return scenario;
+        });
+    }
+
     private void loadSteps(Scenario scenario) {
         List<ScenarioStep> steps = stepRepository.findByScenarioIdOrderByStepOrderAsc(scenario.getId())
                 .stream()

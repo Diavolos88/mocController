@@ -97,6 +97,12 @@ public class ScenarioPageController {
             Scenario scenario = scenarioService.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Scenario not found: " + id));
             
+            // Получаем информацию о группе
+            Group group = null;
+            if (scenario.getGroupId() != null && !scenario.getGroupId().trim().isEmpty()) {
+                group = groupService.findById(scenario.getGroupId()).orElse(null);
+            }
+            
             // Группируем шаги по времени для отображения
             List<ScenarioStep> steps = scenario.getSteps();
             Map<String, List<ScenarioStep>> stepsByTime = new LinkedHashMap<>();
@@ -121,6 +127,7 @@ public class ScenarioPageController {
             }
             
             model.addAttribute("scenario", scenario);
+            model.addAttribute("group", group);
             model.addAttribute("stepsByTime", stepsByTime);
             return "scenario-detail";
         } catch (Exception e) {

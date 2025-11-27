@@ -218,6 +218,57 @@
             gap: 12px;
             margin-top: 16px;
         }
+        .api-example {
+            margin-top: 32px;
+            padding: 20px;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        .api-example h3 {
+            margin: 0 0 12px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .api-example code {
+            display: block;
+            padding: 12px;
+            background: #2d2d2d;
+            color: #f8f8f2;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .copy-btn {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .copy-btn:hover {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(29, 114, 184, 0.3);
+        }
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+        .copy-success {
+            margin-top: 8px;
+            color: #4caf50;
+            font-size: 13px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -238,6 +289,7 @@
     <a href="/scenarios" class="back-link">← Назад к списку сценариев</a>
     <h1 th:text="${scenario.name}">Scenario Name</h1>
     <div class="info">
+        <p th:if="${group != null}"><strong>Группа:</strong> <span th:text="${group.name}">Group Name</span></p>
         <p th:if="${scenario.description}"><strong>Описание:</strong> <span th:text="${scenario.description}"></span></p>
         <p><strong>Количество шагов:</strong> <span th:text="${#lists.size(scenario.steps)}">0</span></p>
     </div>
@@ -274,7 +326,97 @@
             <button type="submit" class="btn btn-delete">Удалить</button>
         </form>
     </div>
+
+    <div class="api-example" th:if="${group != null}">
+        <h3>Пример вызова через API:</h3>
+        <code id="apiCommand" th:data-group-id="${group.id}" 
+              th:data-group-name="${group.name}" 
+              th:data-scenario-name="${scenario.name}">
+            curl -X GET "http://localhost:8080/api/scenarios/execute?group=GROUP&name=SCENARIO&startTime=TIME"
+        </code>
+        <button type="button" class="copy-btn" onclick="copyApiCommand()">Скопировать</button>
+        <div class="copy-success" id="copySuccess">✓ Скопировано в буфер обмена!</div>
+    </div>
 </div>
+
+<script>
+    function updateApiCommand() {
+        const codeElement = document.getElementById('apiCommand');
+        if (!codeElement) return;
+        
+        const groupId = codeElement.getAttribute('data-group-id');
+        const groupName = codeElement.getAttribute('data-group-name');
+        const scenarioName = codeElement.getAttribute('data-scenario-name');
+        
+        // Используем название группы (можно заменить на ID, если нужно)
+        const group = encodeURIComponent(groupName);
+        const name = encodeURIComponent(scenarioName);
+        
+        // Получаем текущее время
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        
+        const startTime = encodeURIComponent(`${hours}:${minutes}:${seconds} ${day}-${month}-${year}`);
+        
+        const command = `curl -X GET "http://localhost:8080/api/scenarios/execute?group=${group}&name=${name}&startTime=${startTime}"`;
+        codeElement.textContent = command;
+    }
+    
+    function copyApiCommand() {
+        const codeElement = document.getElementById('apiCommand');
+        if (!codeElement) return;
+        
+        const text = codeElement.textContent;
+        
+        // Используем современный API для копирования
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+                showCopySuccess();
+            }).catch(function(err) {
+                console.error('Ошибка копирования:', err);
+                fallbackCopy(text);
+            });
+        } else {
+            fallbackCopy(text);
+        }
+    }
+    
+    function fallbackCopy(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showCopySuccess();
+        } catch (err) {
+            console.error('Ошибка копирования:', err);
+        }
+        document.body.removeChild(textArea);
+    }
+    
+    function showCopySuccess() {
+        const successMsg = document.getElementById('copySuccess');
+        if (successMsg) {
+            successMsg.style.display = 'block';
+            setTimeout(function() {
+                successMsg.style.display = 'none';
+            }, 2000);
+        }
+    }
+    
+    // Обновляем команду при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        updateApiCommand();
+    });
+</script>
 </body>
 </html>
 

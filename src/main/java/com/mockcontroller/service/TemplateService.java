@@ -84,18 +84,5 @@ public class TemplateService {
         }
         repository.deleteById(id);
     }
-
-    @Transactional
-    public void applyTemplate(String templateId, String systemName) {
-        Template template = findById(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + templateId));
-
-        if (!template.getSystemName().equals(systemName)) {
-            throw new IllegalArgumentException("Template is for different system: " + template.getSystemName());
-        }
-
-        // Применяем шаблон через ConfigService
-        // Это будет сделано в контроллере, так как нужен доступ к ConfigService
-    }
 }
 

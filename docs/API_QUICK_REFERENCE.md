@@ -292,9 +292,30 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/scenarios" `
 
 **Важно:** `groupId` обязателен. Комбинация `groupId` + `name` должна быть уникальной.
 
-### Выполнение сценария
+### Выполнение сценария по ID
 ```bash
 POST /api/scenarios/{id}/execute
+```
+
+### Выполнение сценария по группе и названию
+```bash
+GET /api/scenarios/execute?group={groupId}&name={scenarioName}&startTime={HH:mm:ss dd-MM-yyyy}
+```
+
+**PowerShell:**
+```powershell
+$group = "550e8400-e29b-41d4-a716-446655440000"
+$name = "Сценарий теста"
+$startTime = "14:30:00 25-12-2024"
+
+$uri = "http://localhost:8080/api/scenarios/execute?group=$([System.Web.HttpUtility]::UrlEncode($group))&name=$([System.Web.HttpUtility]::UrlEncode($name))&startTime=$([System.Web.HttpUtility]::UrlEncode($startTime))"
+
+Invoke-RestMethod -Uri $uri -Method Get
+```
+
+**cURL:**
+```bash
+curl -X GET "http://localhost:8080/api/scenarios/execute?group=550e8400-e29b-41d4-a716-446655440000&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
 ```
 
 ### Обновление сценария

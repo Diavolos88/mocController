@@ -115,7 +115,6 @@ public class TemplateApiController {
             );
             return ResponseEntity.ok(template);
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Ошибка при создании шаблона: " + e.getMessage());
         }
