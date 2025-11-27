@@ -3,8 +3,10 @@ package com.mockcontroller.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mockcontroller.dto.ConfigViewDto;
 import com.mockcontroller.model.StoredConfig;
+import com.mockcontroller.model.Template;
 import com.mockcontroller.service.ConfigService;
 import com.mockcontroller.service.ScheduledConfigService;
+import com.mockcontroller.service.TemplateService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +30,7 @@ public class ConfigPageController {
 
     private final ConfigService configService;
     private final ScheduledConfigService scheduledConfigService;
+    private final TemplateService templateService;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss dd-MM-yyyy");
     
     // Внутренний класс для передачи данных системы
@@ -47,9 +50,10 @@ public class ConfigPageController {
         public boolean isInvalid() { return isInvalid; }
     }
 
-    public ConfigPageController(ConfigService configService, ScheduledConfigService scheduledConfigService) {
+    public ConfigPageController(ConfigService configService, ScheduledConfigService scheduledConfigService, TemplateService templateService) {
         this.configService = configService;
         this.scheduledConfigService = scheduledConfigService;
+        this.templateService = templateService;
     }
 
     @GetMapping("/")
@@ -189,6 +193,24 @@ public class ConfigPageController {
             }
             model.addAttribute("scheduledUpdates", scheduledUpdates);
             model.addAttribute("formattedScheduledTimes", formattedScheduledTimes);
+            
+            // Получаем шаблоны для текущей системы
+            List<Template> templates = templateService.findBySystemName(decodedName);
+            model.addAttribute("templates", templates);
+            
+            // Добавляем JSON конфиги шаблонов для JavaScript
+            try {
+                Map<String, String> templatesConfigJson = new HashMap<>();
+                for (Template template : templates) {
+                    if (template.getConfig() != null) {
+                        String configJson = configService.toPrettyJson(template.getConfig());
+                        templatesConfigJson.put(template.getId(), configJson);
+                    }
+                }
+                model.addAttribute("templatesConfigJson", templatesConfigJson);
+            } catch (Exception e) {
+                model.addAttribute("templatesConfigJson", new HashMap<>());
+            }
             
             return "config";
         } catch (Exception e) {
