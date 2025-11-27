@@ -463,6 +463,13 @@
                 document.getElementById('templatesContainer').innerHTML = '';
                 allSelectedTemplates.clear();
                 
+                // Показываем индикатор загрузки
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                if (loadingOverlay) {
+                    loadingOverlay.querySelector('.loading-text').textContent = 'Загрузка шаблонов...';
+                    loadingOverlay.classList.add('active');
+                }
+                
                 // Загружаем шаблоны для всех систем из группы параллельно
                 const loadPromises = group.systemNames.map(system => 
                     fetch('/api/templates/by-system/' + encodeURIComponent(system))
@@ -503,6 +510,9 @@
                         // Показываем секцию шаблонов
                         templatesSection.style.display = 'block';
                         emptyState.style.display = 'none';
+                        
+                        // Скрываем индикатор загрузки
+                        if (loadingOverlay) loadingOverlay.classList.remove('active');
                         
                         // Добавляем группы mock
                         Object.entries(mockGroups).forEach(([mockName, templatesList]) => {
@@ -864,8 +874,17 @@
             steps: steps
         };
         
-        // Логируем для отладки
-        console.log('Отправка запроса на создание сценария:', requestBody);
+                // Показываем индикатор загрузки
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                const submitButton = scenarioForm.querySelector('button[type="submit"]');
+                if (loadingOverlay) {
+                    loadingOverlay.querySelector('.loading-text').textContent = 'Создание сценария...';
+                    loadingOverlay.classList.add('active');
+                }
+                if (submitButton) {
+                    submitButton.classList.add('button-loading');
+                    submitButton.disabled = true;
+                }
         
         // Отправляем запрос
         fetch('/api/scenarios', {
@@ -892,6 +911,14 @@
         .catch(error => {
             console.error('Ошибка:', error);
             alert('Ошибка при создании сценария: ' + error.message);
+        })
+        .finally(() => {
+            // Скрываем индикатор загрузки
+            if (loadingOverlay) loadingOverlay.classList.remove('active');
+            if (submitButton) {
+                submitButton.classList.remove('button-loading');
+                submitButton.disabled = false;
+            }
         });
     });
     

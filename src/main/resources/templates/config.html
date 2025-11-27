@@ -683,6 +683,14 @@
         </div>
     </div>
 
+    <!-- Индикатор загрузки -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+    </div>
+
     <form id="configForm" th:action="@{'/configs/' + ${systemName}}" method="post">
         <input type="hidden" name="action" value="update"/>
 
@@ -1223,6 +1231,15 @@
                         description: document.getElementById('templateDescription').value.trim() || null
                     };
 
+                    // Показываем индикатор загрузки
+                    const loadingOverlay = document.getElementById('loadingOverlay');
+                    const submitButton = templateForm.querySelector('button[type="submit"]');
+                    if (loadingOverlay) loadingOverlay.classList.add('active');
+                    if (submitButton) {
+                        submitButton.classList.add('button-loading');
+                        submitButton.disabled = true;
+                    }
+
                     fetch('/api/templates', {
                         method: 'POST',
                         headers: {
@@ -1246,6 +1263,14 @@
                     .catch(error => {
                         console.error('Ошибка:', error);
                         alert('Ошибка при сохранении шаблона: ' + error.message);
+                    })
+                    .finally(() => {
+                        // Скрываем индикатор загрузки
+                        if (loadingOverlay) loadingOverlay.classList.remove('active');
+                        if (submitButton) {
+                            submitButton.classList.remove('button-loading');
+                            submitButton.disabled = false;
+                        }
                     });
                 });
             }

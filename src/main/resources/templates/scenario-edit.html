@@ -381,6 +381,14 @@
 
     <div th:if="${param.error}" class="error" th:text="${param.error[0]}"></div>
 
+    <!-- Индикатор загрузки -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+    </div>
+
     <form id="scenarioForm">
         <input type="hidden" id="scenarioId" th:value="${scenario.id}"/>
         <div class="form-group">
