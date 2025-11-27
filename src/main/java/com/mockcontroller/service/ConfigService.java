@@ -276,12 +276,10 @@ public class ConfigService {
             return false;
         }
         try {
-            String leftStr = objectMapper.writeValueAsString(
-                objectMapper.readTree(objectMapper.writeValueAsString(left))
-            );
-            String rightStr = objectMapper.writeValueAsString(
-                objectMapper.readTree(objectMapper.writeValueAsString(right))
-            );
+            JsonNode normalizedLeft = normalizeJsonNode(left);
+            JsonNode normalizedRight = normalizeJsonNode(right);
+            String leftStr = objectMapper.writeValueAsString(normalizedLeft);
+            String rightStr = objectMapper.writeValueAsString(normalizedRight);
             return leftStr.equals(rightStr);
         } catch (Exception e) {
             return left.equals(right);
@@ -394,57 +392,10 @@ public class ConfigService {
         
         StoredConfig stored = mapper.toModel(entity);
         
-        ObjectNode newConfig = objectMapper.createObjectNode();
-        
-        ObjectNode delaysNode = objectMapper.createObjectNode();
-        if (delays != null) {
-            delays.forEach((key, value) -> {
-                if (value != null && !value.isEmpty()) {
-                    try {
-                        int intValue = Integer.parseInt(value);
-                        if (intValue < 0) {
-                            throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть неотрицательным числом");
-                        }
-                        delaysNode.put(key, intValue);
-                    } catch (NumberFormatException e) {
-                        throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть целым числом, получено: " + value);
-                    }
-                }
-            });
-        }
-        newConfig.set("delays", delaysNode);
+        JsonNode newConfig = createConfigFromForm(delays, stringParams, intParams, loggingLv);
         
         // Валидируем созданный конфиг
         validateConfig(newConfig);
-        
-        ObjectNode stringParamsNode = objectMapper.createObjectNode();
-        if (stringParams != null) {
-            stringParams.forEach((key, value) -> {
-                if (value != null) {
-                    stringParamsNode.put(key, value);
-                }
-            });
-        }
-        newConfig.set("stringParams", stringParamsNode);
-        
-        ObjectNode intParamsNode = objectMapper.createObjectNode();
-        if (intParams != null) {
-            intParams.forEach((key, value) -> {
-                if (value != null && !value.isEmpty()) {
-                    try {
-                        int intValue = Integer.parseInt(value);
-                        intParamsNode.put(key, intValue);
-                    } catch (NumberFormatException e) {
-                        throw new IllegalArgumentException("Значение целочисленного параметра '" + key + "' должно быть целым числом, получено: " + value);
-                    }
-                }
-            });
-        }
-        newConfig.set("intParams", intParamsNode);
-        
-        if (loggingLv != null && !loggingLv.isEmpty()) {
-            newConfig.put("loggingLv", loggingLv);
-        }
         
         JsonNode normalizedNewConfig;
         try {
@@ -536,6 +487,21 @@ public class ConfigService {
     public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, Map<String, String> intParams, String loggingLv) {
         ObjectNode newConfig = objectMapper.createObjectNode();
         
+        newConfig.set("delays", createDelaysNode(delays));
+        newConfig.set("stringParams", createStringParamsNode(stringParams));
+        newConfig.set("intParams", createIntParamsNode(intParams));
+        
+        if (loggingLv != null && !loggingLv.isEmpty()) {
+            newConfig.put("loggingLv", loggingLv);
+        }
+        
+        return newConfig;
+    }
+    
+    /**
+     * Создает узел delays из Map
+     */
+    private ObjectNode createDelaysNode(Map<String, String> delays) {
         ObjectNode delaysNode = objectMapper.createObjectNode();
         if (delays != null) {
             delays.forEach((key, value) -> {
@@ -552,8 +518,13 @@ public class ConfigService {
                 }
             });
         }
-        newConfig.set("delays", delaysNode);
-        
+        return delaysNode;
+    }
+    
+    /**
+     * Создает узел stringParams из Map
+     */
+    private ObjectNode createStringParamsNode(Map<String, String> stringParams) {
         ObjectNode stringParamsNode = objectMapper.createObjectNode();
         if (stringParams != null) {
             stringParams.forEach((key, value) -> {
@@ -562,8 +533,13 @@ public class ConfigService {
                 }
             });
         }
-        newConfig.set("stringParams", stringParamsNode);
-        
+        return stringParamsNode;
+    }
+    
+    /**
+     * Создает узел intParams из Map
+     */
+    private ObjectNode createIntParamsNode(Map<String, String> intParams) {
         ObjectNode intParamsNode = objectMapper.createObjectNode();
         if (intParams != null) {
             intParams.forEach((key, value) -> {
@@ -577,13 +553,7 @@ public class ConfigService {
                 }
             });
         }
-        newConfig.set("intParams", intParamsNode);
-        
-        if (loggingLv != null && !loggingLv.isEmpty()) {
-            newConfig.put("loggingLv", loggingLv);
-        }
-        
-        return newConfig;
+        return intParamsNode;
     }
 
     @Transactional
