@@ -20,12 +20,25 @@
     }
     
     function initTheme() {
-        const themeToggle = document.getElementById('themeToggle');
+        // Пытаемся найти кнопку несколько раз, если она еще не загружена
+        let themeToggle = document.getElementById('themeToggle');
         if (!themeToggle) {
-            console.warn('Кнопка переключения темы не найдена');
+            // Если кнопка не найдена, пробуем еще раз через небольшую задержку
+            setTimeout(function() {
+                themeToggle = document.getElementById('themeToggle');
+                if (themeToggle) {
+                    setupThemeToggle(themeToggle);
+                } else {
+                    console.warn('Кнопка переключения темы не найдена после задержки');
+                }
+            }, 100);
             return;
         }
         
+        setupThemeToggle(themeToggle);
+    }
+    
+    function setupThemeToggle(themeToggle) {
         const body = document.body;
         const html = document.documentElement;
         
@@ -41,8 +54,12 @@
             themeToggle.textContent = '🌙';
         }
         
+        // Удаляем старый обработчик, если он был
+        const newToggle = themeToggle.cloneNode(true);
+        themeToggle.parentNode.replaceChild(newToggle, themeToggle);
+        
         // Обработчик переключения темы
-        themeToggle.addEventListener('click', function(e) {
+        newToggle.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -52,13 +69,13 @@
                 // Переключаем на светлую тему
                 body.classList.remove('dark-theme');
                 html.classList.remove('dark-theme');
-                themeToggle.textContent = '🌙';
+                newToggle.textContent = '🌙';
                 localStorage.setItem('theme', 'light');
             } else {
                 // Переключаем на темную тему
                 body.classList.add('dark-theme');
                 html.classList.add('dark-theme');
-                themeToggle.textContent = '☀️';
+                newToggle.textContent = '☀️';
                 localStorage.setItem('theme', 'dark');
             }
         });
@@ -69,7 +86,7 @@
         document.addEventListener('DOMContentLoaded', initTheme);
     } else {
         // Если DOM уже загружен, инициализируем сразу
-        setTimeout(initTheme, 0);
+        initTheme();
     }
 })();
 
