@@ -1182,9 +1182,6 @@
                         description: document.getElementById('templateDescription').value.trim() || null
                     };
 
-                    // Логируем для отладки
-                    console.log('Отправка запроса:', requestBody);
-                    
                     fetch('/api/templates', {
                         method: 'POST',
                         headers: {
