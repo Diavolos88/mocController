@@ -268,6 +268,20 @@ public class ConfigService {
         }
     }
 
+    /**
+     * Нормализует JsonNode для корректного сравнения
+     */
+    private JsonNode normalizeJsonNode(JsonNode node) {
+        if (node == null) {
+            return objectMapper.createObjectNode();
+        }
+        try {
+            return objectMapper.readTree(objectMapper.writeValueAsString(node));
+        } catch (Exception e) {
+            return node;
+        }
+    }
+
     private boolean jsonEquals(JsonNode left, JsonNode right) {
         if (left == null && right == null) {
             return true;
@@ -397,19 +411,8 @@ public class ConfigService {
         // Валидируем созданный конфиг
         validateConfig(newConfig);
         
-        JsonNode normalizedNewConfig;
-        try {
-            normalizedNewConfig = objectMapper.readTree(objectMapper.writeValueAsString(newConfig));
-        } catch (Exception e) {
-            normalizedNewConfig = newConfig;
-        }
-        
-        JsonNode normalizedCurrentConfig;
-        try {
-            normalizedCurrentConfig = objectMapper.readTree(objectMapper.writeValueAsString(stored.getCurrentConfig()));
-        } catch (Exception e) {
-            normalizedCurrentConfig = stored.getCurrentConfig();
-        }
+        JsonNode normalizedNewConfig = normalizeJsonNode(newConfig);
+        JsonNode normalizedCurrentConfig = normalizeJsonNode(stored.getCurrentConfig());
         
         boolean hasChanges = !jsonEquals(normalizedCurrentConfig, normalizedNewConfig);
         
