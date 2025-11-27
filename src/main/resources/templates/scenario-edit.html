@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Редактировать сценарий</title>
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -40,6 +41,9 @@
         .nav-links-right {
             position: absolute;
             right: 0;
+            display: flex;
+            gap: 12px;
+            align-items: center;
         }
         .nav-link.faq {
             background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
@@ -953,6 +957,7 @@
         }, 400);
     });
 </script>
+<script th:src="@{/js/theme.js}"></script>
 </body>
 </html>
 
