@@ -486,11 +486,22 @@ public class ConfigService {
                 String key = entry.getKey();
                 JsonNode valueNode = entry.getValue();
                 
-                if (!valueNode.isNumber() || !valueNode.isInt()) {
+                int intValue;
+                if (valueNode.isNumber()) {
+                    if (!valueNode.isInt()) {
+                        throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть целым числом");
+                    }
+                    intValue = valueNode.asInt();
+                } else if (valueNode.isTextual()) {
+                    try {
+                        intValue = Integer.parseInt(valueNode.asText());
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть целым числом");
+                    }
+                } else {
                     throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть целым числом");
                 }
                 
-                int intValue = valueNode.asInt();
                 if (intValue < 0) {
                     throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть неотрицательным числом");
                 }
@@ -502,7 +513,17 @@ public class ConfigService {
                 String key = entry.getKey();
                 JsonNode valueNode = entry.getValue();
                 
-                if (!valueNode.isNumber() || !valueNode.isInt()) {
+                if (valueNode.isNumber()) {
+                    if (!valueNode.isInt()) {
+                        throw new IllegalArgumentException("Значение целочисленного параметра '" + key + "' должно быть целым числом");
+                    }
+                } else if (valueNode.isTextual()) {
+                    try {
+                        Integer.parseInt(valueNode.asText());
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Значение целочисленного параметра '" + key + "' должно быть целым числом");
+                    }
+                } else {
                     throw new IllegalArgumentException("Значение целочисленного параметра '" + key + "' должно быть целым числом");
                 }
             });
