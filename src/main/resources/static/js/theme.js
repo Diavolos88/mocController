@@ -5,7 +5,9 @@
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark') {
             document.documentElement.classList.add('dark-theme');
-            document.body.classList.add('dark-theme');
+            if (document.body) {
+                document.body.classList.add('dark-theme');
+            }
         }
     }
     
@@ -19,7 +21,10 @@
     
     function initTheme() {
         const themeToggle = document.getElementById('themeToggle');
-        if (!themeToggle) return;
+        if (!themeToggle) {
+            console.warn('Кнопка переключения темы не найдена');
+            return;
+        }
         
         const body = document.body;
         const html = document.documentElement;
@@ -37,7 +42,10 @@
         }
         
         // Обработчик переключения темы
-        themeToggle.addEventListener('click', function() {
+        themeToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const isDark = body.classList.contains('dark-theme');
             
             if (isDark) {
@@ -60,7 +68,8 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initTheme);
     } else {
-        initTheme();
+        // Если DOM уже загружен, инициализируем сразу
+        setTimeout(initTheme, 0);
     }
 })();
 
