@@ -844,6 +844,34 @@
             updateChangedStyle(input);
         });
 
+        // Валидация формы перед отправкой
+        const configForm = document.getElementById('configForm');
+        if (configForm) {
+            configForm.addEventListener('submit', function(e) {
+                const formData = new FormData(configForm);
+                const errors = [];
+                
+                // Валидация delays - должны быть числовыми
+                for (const [key, value] of formData.entries()) {
+                    if (key.startsWith('delay_')) {
+                        if (value && value.trim() !== '') {
+                            const numValue = Number(value);
+                            if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 0) {
+                                const fieldName = key.substring(6);
+                                errors.push(`Поле "${fieldName}" должно быть целым неотрицательным числом`);
+                            }
+                        }
+                    }
+                }
+                
+                if (errors.length > 0) {
+                    e.preventDefault();
+                    alert('Ошибки валидации:\n' + errors.join('\n'));
+                    return false;
+                }
+            });
+        }
+
         // Если страница загружена после успешного сохранения, обновляем исходные значения
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('saved') === 'true') {
@@ -1062,6 +1090,28 @@
                 if (!scheduledDateTime) {
                     e.preventDefault();
                     alert('Введите дату и время в формате hh:mm:ss DD-MM-YYYY');
+                    return false;
+                }
+                
+                // Валидация delays - должны быть числовыми
+                const formData = new FormData(configForm);
+                const errors = [];
+                
+                for (const [key, value] of formData.entries()) {
+                    if (key.startsWith('delay_')) {
+                        if (value && value.trim() !== '') {
+                            const numValue = Number(value);
+                            if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 0) {
+                                const fieldName = key.substring(6);
+                                errors.push(`Поле "${fieldName}" должно быть целым неотрицательным числом`);
+                            }
+                        }
+                    }
+                }
+                
+                if (errors.length > 0) {
+                    e.preventDefault();
+                    alert('Ошибки валидации:\n' + errors.join('\n'));
                     return false;
                 }
 

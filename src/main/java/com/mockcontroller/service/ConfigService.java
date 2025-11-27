@@ -51,6 +51,9 @@ public class ConfigService {
 
     @Transactional
     public void updateCurrentConfig(String systemName, JsonNode newConfig) {
+        // Валидируем конфиг перед обновлением
+        validateConfig(newConfig);
+        
         StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
                 .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
@@ -99,6 +102,12 @@ public class ConfigService {
         String sanitizedName = sanitize(request.getSystemName());
         String incomingVersion = request.getVersion();
         JsonNode incomingConfig = request.getConfig();
+        
+        // Валидируем входящий конфиг
+        if (incomingConfig != null) {
+            validateConfig(incomingConfig);
+        }
+        
         Optional<StoredConfigEntity> currentOpt = repository.findBySystemName(sanitizedName);
 
         int incomingVersionInt = parseVersion(incomingVersion);
@@ -146,6 +155,10 @@ public class ConfigService {
 
     @Transactional
     public ConfigSyncResponse handleIncoming(ConfigRequest request) {
+        // Валидируем конфиг перед обработкой
+        if (request.getConfig() != null) {
+            validateConfig(request.getConfig());
+        }
         String sanitizedName = sanitize(request.getSystemName());
         Optional<StoredConfigEntity> currentOpt = repository.findBySystemName(sanitizedName);
         JsonNode incoming = request.getConfig();
@@ -369,14 +382,21 @@ public class ConfigService {
             delays.forEach((key, value) -> {
                 if (value != null && !value.isEmpty()) {
                     try {
-                        delaysNode.put(key, Integer.parseInt(value));
+                        int intValue = Integer.parseInt(value);
+                        if (intValue < 0) {
+                            throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть неотрицательным числом");
+                        }
+                        delaysNode.put(key, intValue);
                     } catch (NumberFormatException e) {
-                        delaysNode.put(key, value);
+                        throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть целым числом, получено: " + value);
                     }
                 }
             });
         }
         newConfig.set("delays", delaysNode);
+        
+        // Валидируем созданный конфиг
+        validateConfig(newConfig);
         
         ObjectNode stringParamsNode = objectMapper.createObjectNode();
         if (stringParams != null) {
@@ -419,6 +439,31 @@ public class ConfigService {
         return true;
     }
 
+    /**
+     * Валидирует конфигурацию: delays должны быть числовыми и неотрицательными
+     */
+    public void validateConfig(JsonNode config) {
+        if (config == null) {
+            return;
+        }
+        
+        if (config.has("delays") && config.get("delays").isObject()) {
+            config.get("delays").fields().forEachRemaining(entry -> {
+                String key = entry.getKey();
+                JsonNode valueNode = entry.getValue();
+                
+                if (!valueNode.isNumber() || !valueNode.isInt()) {
+                    throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть целым числом");
+                }
+                
+                int intValue = valueNode.asInt();
+                if (intValue < 0) {
+                    throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть неотрицательным числом");
+                }
+            });
+        }
+    }
+
     public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, String loggingLv) {
         ObjectNode newConfig = objectMapper.createObjectNode();
         
@@ -427,9 +472,13 @@ public class ConfigService {
             delays.forEach((key, value) -> {
                 if (value != null && !value.isEmpty()) {
                     try {
-                        delaysNode.put(key, Integer.parseInt(value));
+                        int intValue = Integer.parseInt(value);
+                        if (intValue < 0) {
+                            throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть неотрицательным числом");
+                        }
+                        delaysNode.put(key, intValue);
                     } catch (NumberFormatException e) {
-                        delaysNode.put(key, value);
+                        throw new IllegalArgumentException("Значение задержки '" + key + "' должно быть целым числом, получено: " + value);
                     }
                 }
             });

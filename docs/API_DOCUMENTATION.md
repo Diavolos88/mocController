@@ -818,9 +818,9 @@ POST /configs/auth-mock?action=delete
 ```json
 {
   "delays": {
-    "loginDelayMs": "1000",
-    "tokenDelayMs": "500",
-    "refreshDelayMs": "300"
+    "loginDelayMs": 1000,
+    "tokenDelayMs": 500,
+    "refreshDelayMs": 300
   },
   "stringParams": {
     "mode": "normal",
@@ -832,13 +832,19 @@ POST /configs/auth-mock?action=delete
 ```
 
 **Поля:**
-- `delays` (object) - задержки в миллисекундах (целочисленные значения)
-- `stringParams` (object) - строковые параметры
+- `delays` (object) - задержки в миллисекундах (целочисленные неотрицательные значения, обязательны для валидации)
+- `stringParams` (object) - строковые параметры (любые строковые значения)
 - `loggingLv` (string) - уровень логирования, возможные значения:
   - `ERROR`
   - `WARN`
   - `INFO`
   - `DEBUG`
+
+**Валидация:**
+- Все значения в `delays` должны быть целыми неотрицательными числами (≥ 0)
+- Значения в `stringParams` могут быть любыми строками
+- Валидация выполняется как на клиенте (JavaScript), так и на сервере (Java)
+- При нарушении валидации возвращается ошибка с описанием проблемы
 
 ---
 

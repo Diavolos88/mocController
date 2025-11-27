@@ -91,6 +91,11 @@ public class ConfigApiController {
 
             // Создаем конфиг из запроса
             com.fasterxml.jackson.databind.JsonNode newConfig = request.getConfig();
+            
+            // Валидируем конфиг
+            if (newConfig != null) {
+                configService.validateConfig(newConfig);
+            }
 
             // Планируем обновление
             ScheduledConfigUpdate update = scheduledConfigService.scheduleUpdate(

@@ -244,15 +244,20 @@ public class ConfigPageController {
             // Извлекаем loggingLv
             String loggingLv = allParams.get("loggingLv");
             
-            boolean hasChanges = configService.updateConfigFromForm(decodedName, delays, stringParams, loggingLv);
-            if (!hasChanges) {
-                return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + 
-                       "?info=" + java.net.URLEncoder.encode("Изменений не было, конфиг не обновлен", StandardCharsets.UTF_8);
+            try {
+                boolean hasChanges = configService.updateConfigFromForm(decodedName, delays, stringParams, loggingLv);
+                if (!hasChanges) {
+                    return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + 
+                           "?info=" + java.net.URLEncoder.encode("Изменений не было, конфиг не обновлен", StandardCharsets.UTF_8);
+                }
+                return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + "?saved=true";
+            } catch (IllegalArgumentException e) {
+                return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + "?error=" + 
+                       java.net.URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
             }
-            return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + "?saved=true";
         } catch (Exception e) {
             return "redirect:/configs/" + systemName + "?error=" + 
-                   java.net.URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+                   java.net.URLEncoder.encode("Ошибка при обновлении конфига: " + e.getMessage(), StandardCharsets.UTF_8);
         }
     }
 
