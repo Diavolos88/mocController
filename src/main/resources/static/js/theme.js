@@ -11,25 +11,17 @@
         }
     }
     
-    // Применяем тему сразу, если скрипт загружается до полной загрузки страницы
-    if (document.readyState === 'loading') {
-        applyThemeImmediately();
-    } else {
-        // Если страница уже загружена, применяем сразу
-        applyThemeImmediately();
-    }
+    // Применяем тему сразу
+    applyThemeImmediately();
     
     function initTheme() {
-        // Пытаемся найти кнопку несколько раз, если она еще не загружена
-        let themeToggle = document.getElementById('themeToggle');
+        const themeToggle = document.getElementById('themeToggle');
         if (!themeToggle) {
             // Если кнопка не найдена, пробуем еще раз через небольшую задержку
             setTimeout(function() {
-                themeToggle = document.getElementById('themeToggle');
-                if (themeToggle) {
-                    setupThemeToggle(themeToggle);
-                } else {
-                    console.warn('Кнопка переключения темы не найдена после задержки');
+                const retryToggle = document.getElementById('themeToggle');
+                if (retryToggle) {
+                    setupThemeToggle(retryToggle);
                 }
             }, 100);
             return;

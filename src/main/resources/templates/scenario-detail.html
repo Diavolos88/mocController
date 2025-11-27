@@ -383,8 +383,7 @@
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(function() {
                 showCopySuccess();
-            }).catch(function(err) {
-                console.error('Ошибка копирования:', err);
+            }).catch(function() {
                 fallbackCopy(text);
             });
         } else {
@@ -403,7 +402,7 @@
             document.execCommand('copy');
             showCopySuccess();
         } catch (err) {
-            console.error('Ошибка копирования:', err);
+            // Игнорируем ошибки копирования
         }
         document.body.removeChild(textArea);
     }

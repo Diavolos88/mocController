@@ -481,8 +481,7 @@
                     fetch('/api/templates/by-system/' + encodeURIComponent(system))
                         .then(response => response.json())
                         .then(templates => ({ system, templates }))
-                        .catch(error => {
-                            console.error('Ошибка при загрузке шаблонов для системы:', system, error);
+                        .catch(() => {
                             return { system, templates: [] };
                         })
                 );
@@ -576,13 +575,11 @@
                         // Обновляем все временные точки
                         updateAllTimePoints();
                     })
-                    .catch(error => {
-                        console.error('Ошибка при загрузке шаблонов группы:', error);
+                    .catch(() => {
                         alert('Ошибка при загрузке шаблонов для группы');
                     });
             })
-            .catch(error => {
-                console.error('Ошибка при загрузке группы:', error);
+            .catch(() => {
                 alert('Ошибка при загрузке группы');
             });
     }
@@ -905,17 +902,14 @@
                 return response.json();
             } else {
                 return response.text().then(text => {
-                    console.error('Ошибка сервера:', response.status, text);
                     throw new Error(text || 'Ошибка при создании сценария');
                 });
             }
         })
         .then(data => {
-            console.log('Сценарий успешно создан:', data);
             window.location.href = '/scenarios/' + data.id + '?info=' + encodeURIComponent('Сценарий успешно создан');
         })
         .catch(error => {
-            console.error('Ошибка:', error);
             alert('Ошибка при создании сценария: ' + error.message);
         })
         .finally(() => {

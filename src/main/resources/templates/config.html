@@ -1414,13 +1414,11 @@
                             // Можно обновить страницу или показать сообщение
                         } else {
                             return response.text().then(text => {
-                                console.error('Ошибка сервера:', text);
                                 throw new Error(text || 'Ошибка при сохранении шаблона');
                             });
                         }
                     })
                     .catch(error => {
-                        console.error('Ошибка:', error);
                         alert('Ошибка при сохранении шаблона: ' + error.message);
                     })
                     .finally(() => {
@@ -1540,7 +1538,6 @@
                 configForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         } catch (error) {
-            console.error('Ошибка при применении шаблона:', error);
             alert('Ошибка при применении шаблона: ' + error.message);
         }
     }
