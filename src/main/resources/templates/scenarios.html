@@ -318,8 +318,9 @@
                 <a href="/templates" class="nav-link template">Шаблоны</a>
                 <a href="/scenarios" class="nav-link scenario active">Сценарии</a>
             </div>
-            <div class="nav-links-right" th:if="${faqUrl != null && !faqUrl.isEmpty()}">
-                <a th:href="${faqUrl}" target="_blank" class="nav-link faq">FAQ</a>
+            <div class="nav-links-right">
+                <a th:if="${faqUrl != null && !faqUrl.isEmpty()}" th:href="${faqUrl}" target="_blank" class="nav-link faq">FAQ</a>
+                <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
             </div>
         </div>
     </div>
