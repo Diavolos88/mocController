@@ -277,6 +277,7 @@ POST /api/scenarios
 **PowerShell:**
 ```powershell
 $body = @{
+    groupId = "group-id-1"
     name = "Сценарий теста"
     description = "Описание"
     steps = @(
@@ -289,9 +290,16 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/scenarios" `
     -Method Post -ContentType "application/json" -Body $body
 ```
 
+**Важно:** `groupId` обязателен. Комбинация `groupId` + `name` должна быть уникальной.
+
 ### Выполнение сценария
 ```bash
 POST /api/scenarios/{id}/execute
+```
+
+### Обновление сценария
+```bash
+PUT /api/scenarios/{id}
 ```
 
 ### Удаление сценария
@@ -306,12 +314,59 @@ curl -X DELETE http://localhost:8080/api/scenarios/660e8400-e29b-41d4-a716-44665
 
 ---
 
+## Группы систем
+
+### Получение списка групп
+```bash
+GET /api/groups
+```
+
+### Создание группы
+```bash
+POST /api/groups
+```
+
+**PowerShell:**
+```powershell
+$body = @{
+    name = "Auth системы"
+    description = "Группа систем аутентификации"
+    systemNames = @("auth", "oauth")
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/groups" `
+    -Method Post -ContentType "application/json" -Body $body
+```
+
+### Получение группы по ID
+```bash
+GET /api/groups/{id}
+```
+
+### Обновление группы
+```bash
+PUT /api/groups/{id}
+```
+
+### Удаление группы
+```bash
+DELETE /api/groups/{id}
+```
+
+**cURL:**
+```bash
+curl -X DELETE http://localhost:8080/api/groups/550e8400-e29b-41d4-a716-446655440000
+```
+
+---
+
 ## Веб-интерфейс
 
 - **Главная:** `http://localhost:8080`
 - **Конфиг:** `http://localhost:8080/configs/{systemName}`
 - **Шаблоны:** `http://localhost:8080/templates`
 - **Сценарии:** `http://localhost:8080/scenarios`
+- **Группы:** `http://localhost:8080/groups`
 
 ---
 

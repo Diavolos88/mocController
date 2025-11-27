@@ -6,5 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ScenarioRepository extends JpaRepository<ScenarioEntity, String> {
+    boolean existsByGroupIdAndName(String groupId, String name);
+    boolean existsByGroupIdAndNameAndIdNot(String groupId, String name, String id);
 }
 

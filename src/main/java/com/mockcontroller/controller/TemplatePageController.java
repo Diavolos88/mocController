@@ -292,6 +292,124 @@ public class TemplatePageController {
         }
     }
 
+    @GetMapping("/templates/{id}/edit")
+    public String editTemplatePage(@PathVariable String id, Model model) {
+        try {
+            Template template = templateService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
+            model.addAttribute("template", template);
+            
+            // Преобразуем JsonNode в Map для удобного отображения в Thymeleaf
+            if (template.getConfig() != null) {
+                JsonNode config = template.getConfig();
+                
+                // Delays
+                Map<String, String> delays = new LinkedHashMap<>();
+                if (config.has("delays") && config.get("delays").isObject()) {
+                    config.get("delays").fields().forEachRemaining(entry -> {
+                        delays.put(entry.getKey(), entry.getValue().asText());
+                    });
+                }
+                model.addAttribute("delays", delays);
+                
+                // String Parameters
+                Map<String, String> stringParams = new LinkedHashMap<>();
+                if (config.has("stringParams") && config.get("stringParams").isObject()) {
+                    config.get("stringParams").fields().forEachRemaining(entry -> {
+                        stringParams.put(entry.getKey(), entry.getValue().asText());
+                    });
+                }
+                model.addAttribute("stringParams", stringParams);
+                
+                // Logging Level
+                String loggingLv = null;
+                if (config.has("loggingLv")) {
+                    loggingLv = config.get("loggingLv").asText();
+                }
+                model.addAttribute("loggingLv", loggingLv);
+            }
+            
+            return "template-edit";
+        } catch (Exception e) {
+            model.addAttribute("error", "Error loading template: " + e.getMessage());
+            return "error";
+        }
+    }
+
+    @PostMapping("/templates/{id}/edit")
+    public String updateTemplate(@PathVariable String id,
+                                 @RequestParam String name,
+                                 @RequestParam(required = false) String description,
+                                 @RequestParam Map<String, String> allParams) {
+        try {
+            templateService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
+
+            // Собираем delays
+            Map<String, String> delays = new LinkedHashMap<>();
+            for (Map.Entry<String, String> entry : allParams.entrySet()) {
+                if (entry.getKey().startsWith("delay_")) {
+                    String key = entry.getKey().substring(6);
+                    if (entry.getValue() != null && !entry.getValue().trim().isEmpty()) {
+                        delays.put(key, entry.getValue());
+                    }
+                }
+            }
+
+            // Собираем stringParams
+            Map<String, String> stringParams = new LinkedHashMap<>();
+            for (Map.Entry<String, String> entry : allParams.entrySet()) {
+                if (entry.getKey().startsWith("string_")) {
+                    String key = entry.getKey().substring(7);
+                    if (entry.getValue() != null && !entry.getValue().trim().isEmpty()) {
+                        stringParams.put(key, entry.getValue());
+                    }
+                }
+            }
+
+            // Получаем loggingLv
+            String loggingLv = allParams.get("loggingLv");
+
+            // Создаем новый конфиг
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.node.ObjectNode newConfig = objectMapper.createObjectNode();
+            
+            com.fasterxml.jackson.databind.node.ObjectNode delaysNode = objectMapper.createObjectNode();
+            delays.forEach((key, value) -> {
+                try {
+                    delaysNode.put(key, Integer.parseInt(value));
+                } catch (NumberFormatException e) {
+                    delaysNode.put(key, value);
+                }
+            });
+            newConfig.set("delays", delaysNode);
+            
+            com.fasterxml.jackson.databind.node.ObjectNode stringParamsNode = objectMapper.createObjectNode();
+            stringParams.forEach((key, value) -> {
+                if (value != null) {
+                    stringParamsNode.put(key, value);
+                }
+            });
+            newConfig.set("stringParams", stringParamsNode);
+            
+            if (loggingLv != null && !loggingLv.trim().isEmpty()) {
+                newConfig.put("loggingLv", loggingLv);
+            }
+
+            // Обновляем шаблон
+            templateService.updateTemplate(id, name, newConfig, description);
+
+            return "redirect:/templates/" + id + "?info=" +
+                   java.net.URLEncoder.encode("Шаблон успешно обновлен", StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return "redirect:/templates/" + id + "?error=" +
+                   java.net.URLEncoder.encode("Шаблон не найден", StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "redirect:/templates/" + id + "/edit?error=" +
+                   java.net.URLEncoder.encode("Ошибка при обновлении шаблона: " + e.getMessage(), StandardCharsets.UTF_8);
+        }
+    }
+
     @PostMapping("/templates/{id}/delete")
     public String deleteTemplate(@PathVariable String id) {
         try {

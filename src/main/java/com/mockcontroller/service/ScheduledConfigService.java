@@ -53,10 +53,16 @@ public class ScheduledConfigService {
     }
 
     public boolean hasScheduledUpdate(String systemName) {
+        if (systemName == null || systemName.trim().isEmpty()) {
+            return false;
+        }
         return repository.existsBySystemName(systemName);
     }
 
     public List<ScheduledConfigUpdate> getScheduledUpdates(String systemName) {
+        if (systemName == null || systemName.trim().isEmpty()) {
+            return List.of();
+        }
         return repository.findBySystemNameOrderByScheduledTimeAsc(systemName).stream()
                 .map(mapper::toModel)
                 .collect(Collectors.toList());
@@ -100,7 +106,9 @@ public class ScheduledConfigService {
 
     @Transactional
     public void deleteAllBySystemName(String systemName) {
-        repository.deleteBySystemName(systemName);
+        if (systemName != null && !systemName.trim().isEmpty()) {
+            repository.deleteBySystemName(systemName);
+        }
     }
 
     private String jsonToString(JsonNode jsonNode) {

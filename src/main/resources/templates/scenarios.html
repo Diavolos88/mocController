@@ -30,6 +30,25 @@
             margin: 0 auto;
             align-items: center;
             justify-content: center;
+            position: relative;
+        }
+        .nav-links-main {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .nav-links-right {
+            position: absolute;
+            right: 0;
+        }
+        .nav-link.faq {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+        }
+        .nav-link.faq:hover {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
         .container { 
             max-width: 1000px; 
@@ -172,6 +191,46 @@
             padding: 40px;
             color: #666;
         }
+        .system-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .system-tab {
+            padding: 8px 16px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            background: #fafafa;
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .system-tab:hover {
+            background: #e8f4fd;
+            border-color: #ff9800;
+            color: #ff9800;
+        }
+        .system-tab.active {
+            background: #ff9800;
+            border-color: #ff9800;
+            color: white;
+        }
+        .system-tab-count {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            background: rgba(255, 255, 255, 0.3);
+            color: inherit;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .system-tab.active .system-tab-count {
+            background: rgba(255, 255, 255, 0.4);
+        }
         .card-actions {
             display: flex;
             gap: 12px;
@@ -191,11 +250,13 @@
             flex-wrap: wrap;
         }
         .btn-apply-now {
-            background: #4CAF50;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
             color: white;
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
         }
         .btn-apply-now:hover {
-            background: #45a049;
+            background: linear-gradient(135deg, #45a049 0%, #388e3c 100%);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
         .schedule-form {
             display: flex;
@@ -226,12 +287,14 @@
             padding: 0 4px;
         }
         .btn-schedule {
-            background: #2196F3;
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
             color: white;
             white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(29, 114, 184, 0.2);
         }
         .btn-schedule:hover {
-            background: #1976D2;
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
         }
         .btn-delete {
             background: #f44336;
@@ -246,9 +309,14 @@
 <div class="container">
     <div class="fixed-nav">
         <div class="nav-links">
-            <a href="/" class="nav-link mocks">Заглушки</a>
-            <a href="/templates" class="nav-link template">Шаблоны</a>
-            <a href="/scenarios" class="nav-link scenario active">Сценарии</a>
+            <div class="nav-links-main">
+                <a href="/" class="nav-link mocks">Заглушки</a>
+                <a href="/templates" class="nav-link template">Шаблоны</a>
+                <a href="/scenarios" class="nav-link scenario active">Сценарии</a>
+            </div>
+            <div class="nav-links-right" th:if="${faqUrl != null && !faqUrl.isEmpty()}">
+                <a th:href="${faqUrl}" target="_blank" class="nav-link faq">FAQ</a>
+            </div>
         </div>
     </div>
 
@@ -265,8 +333,19 @@
         <span th:text="${param.error[0]}"></span>
     </div>
 
+    <!-- Вкладки групп -->
+    <div th:if="${scenariosByGroup != null && !scenariosByGroup.isEmpty()}" class="system-tabs" style="margin-bottom: 24px;">
+        <a th:each="groupEntry : ${scenariosByGroup}" 
+           th:href="@{/scenarios(group=${groupEntry.key})}"
+           th:class="${currentGroup == groupEntry.key ? 'system-tab active' : 'system-tab'}">
+            <span th:text="${groupsMap != null && groupsMap.containsKey(groupEntry.key) ? groupsMap.get(groupEntry.key).name : groupEntry.key}">group</span>
+            <span class="system-tab-count" th:text="${#lists.size(groupEntry.value)}">0</span>
+        </a>
+    </div>
+
     <div th:if="${#lists.isEmpty(scenarios)}" class="empty">
-        <p>Пока нет созданных сценариев. Создайте сценарий через веб-интерфейс или REST API.</p>
+        <p th:if="${currentGroup != null}">Нет сценариев для выбранной группы</p>
+        <p th:if="${currentGroup == null}">Пока нет созданных сценариев. Создайте сценарий через веб-интерфейс или REST API.</p>
     </div>
 
     <div th:each="scenario : ${scenarios}" class="card">

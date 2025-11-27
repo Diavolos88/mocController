@@ -4,25 +4,23 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Scenario {
+public class Group {
 
     private String id;
-    private String groupId;
     private String name;
     private String description;
-    private List<ScenarioStep> steps;
+    private List<String> systemNames;
     private Instant createdAt;
 
-    public Scenario() {
-        this.steps = new ArrayList<>();
+    public Group() {
+        this.systemNames = new ArrayList<>();
     }
 
-    public Scenario(String id, String groupId, String name, String description, List<ScenarioStep> steps, Instant createdAt) {
+    public Group(String id, String name, String description, List<String> systemNames, Instant createdAt) {
         this.id = id;
-        this.groupId = groupId;
         this.name = name;
         this.description = description;
-        this.steps = steps != null ? steps : new ArrayList<>();
+        this.systemNames = systemNames != null ? systemNames : new ArrayList<>();
         this.createdAt = createdAt;
     }
 
@@ -50,12 +48,12 @@ public class Scenario {
         this.description = description;
     }
 
-    public List<ScenarioStep> getSteps() {
-        return steps;
+    public List<String> getSystemNames() {
+        return systemNames;
     }
 
-    public void setSteps(List<ScenarioStep> steps) {
-        this.steps = steps;
+    public void setSystemNames(List<String> systemNames) {
+        this.systemNames = systemNames;
     }
 
     public Instant getCreatedAt() {
@@ -64,14 +62,6 @@ public class Scenario {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public String getGroupId() {
-        return groupId;
-    }
-
-    public void setGroupId(String groupId) {
-        this.groupId = groupId;
     }
 }
 

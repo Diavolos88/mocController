@@ -30,6 +30,25 @@
             margin: 0 auto;
             align-items: center;
             justify-content: center;
+            position: relative;
+        }
+        .nav-links-main {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .nav-links-right {
+            position: absolute;
+            right: 0;
+        }
+        .nav-link.faq {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+        }
+        .nav-link.faq:hover {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
         .container { 
             max-width: 1000px; 
@@ -310,9 +329,14 @@
 <div class="container">
     <div class="fixed-nav">
         <div class="nav-links">
-            <a href="/" class="nav-link mocks">Заглушки</a>
-            <a href="/templates" class="nav-link template active">Шаблоны</a>
-            <a href="/scenarios" class="nav-link scenario">Сценарии</a>
+            <div class="nav-links-main">
+                <a href="/" class="nav-link mocks">Заглушки</a>
+                <a href="/templates" class="nav-link template active">Шаблоны</a>
+                <a href="/scenarios" class="nav-link scenario">Сценарии</a>
+            </div>
+            <div class="nav-links-right" th:if="${faqUrl != null && !faqUrl.isEmpty()}">
+                <a th:href="${faqUrl}" target="_blank" class="nav-link faq">FAQ</a>
+            </div>
         </div>
     </div>
 

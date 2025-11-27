@@ -30,6 +30,25 @@
             margin: 0 auto;
             align-items: center;
             justify-content: center;
+            position: relative;
+        }
+        .nav-links-main {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .nav-links-right {
+            position: absolute;
+            right: 0;
+        }
+        .nav-link.faq {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+        }
+        .nav-link.faq:hover {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
         .nav-link {
             padding: 14px 28px;
@@ -246,14 +265,18 @@
         button:active {
             transform: translateY(0);
         }
-        .primary { 
-            background: #1d72b8; 
-            color: #fff;
+        .primary,
+        .btn-save { 
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
             border-color: #1d72b8;
+            box-shadow: 0 2px 4px rgba(29, 114, 184, 0.2);
         }
-        .primary:hover {
-            background: #155a94;
+        .primary:hover,
+        .btn-save:hover {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
             border-color: #155a94;
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
         }
         .secondary { 
             background: #fff;
@@ -274,13 +297,15 @@
             border-color: #f57c00;
         }
         .schedule { 
-            background: #1d72b8; 
-            color: #fff;
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
             border-color: #1d72b8;
+            box-shadow: 0 2px 4px rgba(29, 114, 184, 0.2);
         }
         .schedule:hover {
-            background: #155a94;
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
             border-color: #155a94;
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
         }
         .template { 
             background: #9c27b0; 
@@ -452,9 +477,14 @@
 <body>
 <div class="fixed-nav">
     <div class="nav-links">
-        <a href="/" class="nav-link active">Заглушки</a>
-        <a href="/templates" class="nav-link template">Шаблоны</a>
-        <a href="/scenarios" class="nav-link scenario">Сценарии</a>
+        <div class="nav-links-main">
+            <a href="/" class="nav-link active">Заглушки</a>
+            <a href="/templates" class="nav-link template">Шаблоны</a>
+            <a href="/scenarios" class="nav-link scenario">Сценарии</a>
+        </div>
+        <div class="nav-links-right" th:if="${faqUrl != null && !faqUrl.isEmpty()}">
+            <a th:href="${faqUrl}" target="_blank" class="nav-link faq">FAQ</a>
+        </div>
     </div>
 </div>
 

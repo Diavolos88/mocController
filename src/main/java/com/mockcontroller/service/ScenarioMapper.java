@@ -17,6 +17,7 @@ public class ScenarioMapper {
         
         return new Scenario(
             entity.getId(),
+            entity.getGroupId(),
             entity.getName(),
             entity.getDescription(),
             null, // steps будут загружены отдельно
@@ -30,10 +31,15 @@ public class ScenarioMapper {
         }
         
         ScenarioEntity entity = new ScenarioEntity();
-        entity.setId(scenario.getId());
+        if (scenario.getId() != null && !scenario.getId().isEmpty()) {
+            entity.setId(scenario.getId());
+        }
+        entity.setGroupId(scenario.getGroupId());
         entity.setName(scenario.getName());
         entity.setDescription(scenario.getDescription());
-        entity.setCreatedAt(scenario.getCreatedAt());
+        if (scenario.getCreatedAt() != null) {
+            entity.setCreatedAt(scenario.getCreatedAt());
+        }
         
         return entity;
     }

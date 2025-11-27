@@ -38,6 +38,51 @@ public class TemplateApiController {
         }
     }
 
+    @GetMapping("/by-system/{system}")
+    public ResponseEntity<Collection<Template>> getTemplatesBySystem(@PathVariable String system) {
+        try {
+            Collection<Template> allTemplates = templateService.findAll();
+            // Фильтруем шаблоны по системе (по префиксу)
+            java.util.List<Template> filteredTemplates = allTemplates.stream()
+                    .filter(template -> {
+                        String templateSystem = template.getSystemName();
+                        if (templateSystem == null) return false;
+                        // Проверяем, соответствует ли шаблон системе
+                        if (isValidTemplate(templateSystem)) {
+                            String systemPrefix = extractSystemPrefix(templateSystem);
+                            return systemPrefix.equals(system);
+                        } else {
+                            return templateSystem.equals(system);
+                        }
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+            return ResponseEntity.ok(filteredTemplates);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    private boolean isValidTemplate(String systemName) {
+        if (systemName == null || systemName.isEmpty()) {
+            return false;
+        }
+        int dashCount = 0;
+        for (char c : systemName.toCharArray()) {
+            if (c == '-') {
+                dashCount++;
+            }
+        }
+        return dashCount >= 2 && systemName.endsWith("-mock");
+    }
+
+    private String extractSystemPrefix(String systemName) {
+        int firstDashIndex = systemName.indexOf('-');
+        if (firstDashIndex > 0) {
+            return systemName.substring(0, firstDashIndex);
+        }
+        return systemName;
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Template> getTemplate(@PathVariable String id) {
         try {

@@ -69,7 +69,12 @@ public class ScenarioApiController {
                 return ResponseEntity.badRequest().body("Не удалось создать шаги сценария. Проверьте формат данных.");
             }
 
+            if (request.getGroupId() == null || request.getGroupId().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Группа обязательна");
+            }
+
             Scenario scenario = scenarioService.createScenario(
+                    request.getGroupId(),
                     request.getName(),
                     request.getDescription(),
                     steps
@@ -83,26 +88,42 @@ public class ScenarioApiController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Scenario> updateScenario(
+    public ResponseEntity<?> updateScenario(
             @PathVariable String id,
             @RequestBody ScenarioRequest request) {
         try {
             if (request.getName() == null || request.getName().trim().isEmpty()) {
-                return ResponseEntity.badRequest().build();
+                return ResponseEntity.badRequest().body("Название сценария обязательно");
+            }
+
+            if (request.getSteps() == null || request.getSteps().isEmpty()) {
+                return ResponseEntity.badRequest().body("Добавьте хотя бы один шаг в сценарий");
+            }
+
+            if (request.getGroupId() == null || request.getGroupId().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Группа обязательна");
             }
 
             List<ScenarioStep> steps = convertSteps(request.getSteps());
+            if (steps.isEmpty()) {
+                return ResponseEntity.badRequest().body("Не удалось создать шаги сценария. Проверьте формат данных.");
+            }
+
             Scenario scenario = scenarioService.updateScenario(
                     id,
+                    request.getGroupId(),
                     request.getName(),
                     request.getDescription(),
                     steps
             );
             return ResponseEntity.ok(scenario);
         } catch (IllegalArgumentException e) {
+            logger.error("Сценарий не найден: {}", id, e);
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            logger.error("Ошибка при обновлении сценария", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Ошибка при обновлении сценария: " + e.getMessage());
         }
     }
 
@@ -125,7 +146,6 @@ public class ScenarioApiController {
                     .orElseThrow(() -> new IllegalArgumentException("Scenario not found"));
 
             LocalDateTime baseTime = LocalDateTime.now();
-            long cumulativeDelay = 0;
 
             for (ScenarioStep step : scenario.getSteps()) {
                 if (step.getTemplate() == null) {
@@ -134,11 +154,23 @@ public class ScenarioApiController {
 
                 LocalDateTime scheduledTime;
                 if (step.getScheduledTime() != null) {
-                    scheduledTime = LocalDateTime.ofInstant(step.getScheduledTime(), 
+                    // Извлекаем относительное время из scheduledTime (HH:mm)
+                    LocalDateTime stepTime = LocalDateTime.ofInstant(step.getScheduledTime(), 
                             java.time.ZoneId.systemDefault());
+                    // Берем только часы и минуты как относительное время
+                    int hours = stepTime.getHour();
+                    int minutes = stepTime.getMinute();
+                    // Вычисляем абсолютное время: baseTime + относительное время
+                    scheduledTime = baseTime.plusHours(hours).plusMinutes(minutes);
                 } else {
-                    cumulativeDelay += step.getDelayMs();
-                    scheduledTime = baseTime.plusSeconds(cumulativeDelay / 1000);
+                    // Используем delayMs для расчета относительно текущего времени
+                    long delaySeconds = step.getDelayMs() / 1000;
+                    scheduledTime = baseTime.plusSeconds(delaySeconds);
+                }
+
+                // Убеждаемся, что время не в прошлом
+                if (scheduledTime.isBefore(LocalDateTime.now())) {
+                    scheduledTime = LocalDateTime.now().plusSeconds(1);
                 }
 
                 // Применяем шаблон через запланированное обновление
@@ -154,6 +186,7 @@ public class ScenarioApiController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
+            logger.error("Ошибка при выполнении сценария", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

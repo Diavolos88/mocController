@@ -1,20 +1,21 @@
 package com.mockcontroller.controller;
 
+import com.mockcontroller.model.Group;
 import com.mockcontroller.model.Scenario;
+import com.mockcontroller.model.ScenarioStep;
 import com.mockcontroller.model.Template;
+import com.mockcontroller.service.GroupService;
 import com.mockcontroller.service.ScenarioService;
 import com.mockcontroller.service.ScheduledConfigService;
 import com.mockcontroller.service.TemplateService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Controller
@@ -23,88 +24,306 @@ public class ScenarioPageController {
     private final ScenarioService scenarioService;
     private final ScheduledConfigService scheduledConfigService;
     private final TemplateService templateService;
+    private final GroupService groupService;
 
-    public ScenarioPageController(ScenarioService scenarioService, 
-                                  ScheduledConfigService scheduledConfigService,
-                                  TemplateService templateService) {
+    public ScenarioPageController(ScenarioService scenarioService,
+                                ScheduledConfigService scheduledConfigService,
+                                TemplateService templateService,
+                                GroupService groupService) {
         this.scenarioService = scenarioService;
         this.scheduledConfigService = scheduledConfigService;
         this.templateService = templateService;
+        this.groupService = groupService;
     }
 
     @GetMapping("/scenarios")
-    public String scenariosPage(Model model) {
-        Collection<Scenario> scenarios = scenarioService.findAll();
-        model.addAttribute("scenarios", scenarios);
+    public String scenariosPage(@RequestParam(required = false) String group, Model model) {
+        Collection<Scenario> allScenarios = scenarioService.findAll();
+        
+        // Группируем сценарии по группам
+        Map<String, List<Scenario>> scenariosByGroup = new LinkedHashMap<>();
+        Map<String, Group> groupsMap = new HashMap<>();
+        
+        // Загружаем все группы
+        Collection<Group> allGroups = groupService.findAll();
+        for (Group g : allGroups) {
+            groupsMap.put(g.getId(), g);
+        }
+        
+        // Группируем сценарии
+        for (Scenario scenario : allScenarios) {
+            String groupId = scenario.getGroupId();
+            if (groupId == null) {
+                groupId = "Без группы";
+            }
+            scenariosByGroup.computeIfAbsent(groupId, k -> new ArrayList<>()).add(scenario);
+        }
+        
+        // Сортируем сценарии внутри каждой группы
+        scenariosByGroup.values().forEach(scenarios -> 
+            scenarios.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+        );
+        
+        // Определяем текущую группу
+        String currentGroup = group;
+        if (currentGroup == null && !scenariosByGroup.isEmpty()) {
+            currentGroup = scenariosByGroup.keySet().iterator().next();
+        }
+        
+        // Получаем сценарии для текущей группы
+        List<Scenario> currentScenarios = currentGroup != null ? 
+            scenariosByGroup.getOrDefault(currentGroup, new ArrayList<>()) : new ArrayList<>();
+        
+        model.addAttribute("scenariosByGroup", scenariosByGroup);
+        model.addAttribute("groupsMap", groupsMap);
+        model.addAttribute("currentGroup", currentGroup);
+        model.addAttribute("scenarios", currentScenarios);
+        model.addAttribute("allGroups", allGroups);
         return "scenarios";
     }
 
     @GetMapping("/scenarios/new")
-    public String newScenarioPage(@RequestParam(required = false) String system, Model model) {
-        // Получаем все системы из шаблонов
-        Collection<Template> allTemplates = templateService.findAll();
-        Map<String, Map<String, List<Template>>> groupedBySystemAndMock = new HashMap<>();
-        Set<String> allSystems = new HashSet<>();
+    public String newScenarioPage(Model model) {
+        // Получаем все группы
+        Collection<Group> groups = groupService.findAll();
         
-        for (Template template : allTemplates) {
-            String systemName = template.getSystemName();
-            if (isValidTemplate(systemName)) {
-                String systemPrefix = extractSystemPrefix(systemName);
-                String mockName = systemName;
-                
-                groupedBySystemAndMock
-                    .computeIfAbsent(systemPrefix, k -> new HashMap<>())
-                    .computeIfAbsent(mockName, k -> new ArrayList<>())
-                    .add(template);
-                
-                allSystems.add(systemPrefix);
-            } else {
-                // Для шаблонов, не соответствующих шаблону, используем полное имя как систему
-                allSystems.add(systemName);
-                groupedBySystemAndMock
-                    .computeIfAbsent(systemName, k -> new HashMap<>())
-                    .computeIfAbsent(systemName, k -> new ArrayList<>())
-                    .add(template);
-            }
-        }
-        
-        // Сортируем системы
-        List<String> systems = new ArrayList<>(allSystems);
-        systems.sort(String::compareToIgnoreCase);
-        
-        // Если выбрана система, получаем шаблоны для неё
-        if (system != null && !system.isEmpty()) {
-            Map<String, List<Template>> mocksInSystem = groupedBySystemAndMock.getOrDefault(system, new HashMap<>());
+        model.addAttribute("groups", groups);
+        return "scenario-new";
+    }
+
+    @GetMapping("/scenarios/{id}")
+    public String scenarioPage(@PathVariable String id, Model model) {
+        try {
+            Scenario scenario = scenarioService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Scenario not found: " + id));
             
-            // Если система не найдена в группировке, ищем все шаблоны с таким systemName
-            if (mocksInSystem.isEmpty()) {
-                for (Template template : allTemplates) {
-                    if (template.getSystemName().equals(system) || 
-                        (isValidTemplate(template.getSystemName()) && extractSystemPrefix(template.getSystemName()).equals(system))) {
-                        mocksInSystem.computeIfAbsent(template.getSystemName(), k -> new ArrayList<>()).add(template);
+            // Группируем шаги по времени для отображения
+            List<ScenarioStep> steps = scenario.getSteps();
+            Map<String, List<ScenarioStep>> stepsByTime = new LinkedHashMap<>();
+            
+            for (ScenarioStep step : steps) {
+                String timeKey;
+                if (step.getScheduledTime() != null) {
+                    // Извлекаем только время (HH:mm) из Instant
+                    LocalDateTime localDateTime = LocalDateTime.ofInstant(
+                        step.getScheduledTime(), 
+                        java.time.ZoneId.systemDefault()
+                    );
+                    timeKey = localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+                } else {
+                    // Используем delayMs для вычисления времени
+                    long delayMs = step.getDelayMs();
+                    long hours = delayMs / (1000 * 60 * 60);
+                    long minutes = (delayMs % (1000 * 60 * 60)) / (1000 * 60);
+                    timeKey = String.format("%02d:%02d", hours, minutes);
+                }
+                stepsByTime.computeIfAbsent(timeKey, k -> new ArrayList<>()).add(step);
+            }
+            
+            model.addAttribute("scenario", scenario);
+            model.addAttribute("stepsByTime", stepsByTime);
+            return "scenario-detail";
+        } catch (Exception e) {
+            model.addAttribute("error", "Error loading scenario: " + e.getMessage());
+            return "error";
+        }
+    }
+
+    @PostMapping("/scenarios/{id}/execute")
+    public String executeScenario(@PathVariable String id) {
+        try {
+            Scenario scenario = scenarioService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Scenario not found"));
+
+            LocalDateTime baseTime = LocalDateTime.now();
+
+            for (var step : scenario.getSteps()) {
+                LocalDateTime scheduledTime;
+
+                if (step.getScheduledTime() != null) {
+                    scheduledTime = LocalDateTime.ofInstant(step.getScheduledTime(), java.time.ZoneId.systemDefault());
+                } else {
+                    long delaySeconds = step.getDelayMs() / 1000;
+                    scheduledTime = baseTime.plusSeconds(delaySeconds);
+                }
+
+                // Убеждаемся, что время не в прошлом
+                if (scheduledTime.isBefore(LocalDateTime.now())) {
+                    scheduledTime = LocalDateTime.now().plusSeconds(1);
+                }
+
+                scheduledConfigService.scheduleUpdate(
+                        step.getTemplate().getSystemName(),
+                        step.getTemplate().getConfig(),
+                        scheduledTime,
+                        "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")"
+                );
+            }
+
+            return "redirect:/scenarios/" + id + "?info=" +
+                   URLEncoder.encode("Сценарий запущен", StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "redirect:/scenarios/" + id + "?error=" +
+                   URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+        }
+    }
+
+    @PostMapping("/scenarios/{id}/execute-scheduled")
+    public String executeScenarioScheduled(@PathVariable String id,
+                                          @RequestParam String scheduledDateTime,
+                                          @RequestParam(required = false) String scheduleComment) {
+        try {
+            Scenario scenario = scenarioService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Scenario not found"));
+
+            // Парсим время начала сценария
+            LocalDateTime startTime;
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss dd-MM-yyyy");
+                startTime = LocalDateTime.parse(scheduledDateTime, formatter);
+            } catch (Exception e) {
+                return "redirect:/scenarios?error=" +
+                       URLEncoder.encode("Неверный формат даты и времени. Используйте: HH:mm:ss dd-MM-yyyy", StandardCharsets.UTF_8);
+            }
+
+            // Проверяем, что время начала не в прошлом
+            if (startTime.isBefore(LocalDateTime.now())) {
+                return "redirect:/scenarios?error=" +
+                       URLEncoder.encode("Время начала сценария не может быть в прошлом", StandardCharsets.UTF_8);
+            }
+
+            // Применяем шаги сценария относительно времени начала
+            for (var step : scenario.getSteps()) {
+                LocalDateTime scheduledTime;
+
+                if (step.getScheduledTime() != null) {
+                    // Если у шага есть scheduledTime, используем его как абсолютное время
+                    scheduledTime = LocalDateTime.ofInstant(step.getScheduledTime(), java.time.ZoneId.systemDefault());
+                    // Но пересчитываем относительно startTime
+                    long stepDelaySeconds = step.getDelayMs() / 1000;
+                    scheduledTime = startTime.plusSeconds(stepDelaySeconds);
+                } else {
+                    // Используем delayMs относительно startTime
+                    long delaySeconds = step.getDelayMs() / 1000;
+                    scheduledTime = startTime.plusSeconds(delaySeconds);
+                }
+
+                // Убеждаемся, что время не в прошлом
+                if (scheduledTime.isBefore(LocalDateTime.now())) {
+                    scheduledTime = LocalDateTime.now().plusSeconds(1);
+                }
+
+                String comment = scheduleComment != null && !scheduleComment.trim().isEmpty() ?
+                        scheduleComment : "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")";
+
+                scheduledConfigService.scheduleUpdate(
+                        step.getTemplate().getSystemName(),
+                        step.getTemplate().getConfig(),
+                        scheduledTime,
+                        comment
+                );
+            }
+
+            return "redirect:/scenarios/" + id + "?info=" +
+                   URLEncoder.encode("Сценарий запланирован на " + scheduledDateTime, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return "redirect:/scenarios?error=" +
+                   URLEncoder.encode("Сценарий не найден", StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "redirect:/scenarios?error=" +
+                   URLEncoder.encode("Ошибка при планировании сценария: " + e.getMessage(), StandardCharsets.UTF_8);
+        }
+    }
+
+    @PostMapping("/scenarios/{id}/delete")
+    public String deleteScenario(@PathVariable String id) {
+        try {
+            scenarioService.deleteScenario(id);
+            return "redirect:/scenarios?info=" +
+                   URLEncoder.encode("Сценарий успешно удален", StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return "redirect:/scenarios?error=" +
+                   URLEncoder.encode("Сценарий не найден", StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "redirect:/scenarios?error=" +
+                   URLEncoder.encode("Ошибка при удалении сценария: " + e.getMessage(), StandardCharsets.UTF_8);
+        }
+    }
+
+    @GetMapping("/scenarios/{id}/edit")
+    public String editScenarioPage(@PathVariable String id, Model model) {
+        try {
+            Scenario scenario = scenarioService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Scenario not found: " + id));
+            
+            // Получаем все группы
+            Collection<Group> groups = groupService.findAll();
+            
+            // Если у сценария нет группы, это ошибка
+            if (scenario.getGroupId() == null || scenario.getGroupId().trim().isEmpty()) {
+                throw new IllegalArgumentException("У сценария не указана группа");
+            }
+            
+            // Получаем шаблоны для группы сценария
+            List<String> groupSystems = groupService.getSystemsByGroupId(scenario.getGroupId());
+            Collection<Template> allTemplates = templateService.findAll();
+            Map<String, List<Template>> templatesByMock = new LinkedHashMap<>();
+            
+            for (Template template : allTemplates) {
+                String systemName = template.getSystemName();
+                // Проверяем, принадлежит ли шаблон системе из группы
+                boolean belongsToGroup = false;
+                for (String groupSystem : groupSystems) {
+                    if (isValidTemplate(systemName)) {
+                        String systemPrefix = extractSystemPrefix(systemName);
+                        if (systemPrefix.equals(groupSystem)) {
+                            belongsToGroup = true;
+                            break;
+                        }
+                    } else if (systemName.equals(groupSystem)) {
+                        belongsToGroup = true;
+                        break;
                     }
+                }
+                
+                if (belongsToGroup) {
+                    String mockName = systemName;
+                    templatesByMock.computeIfAbsent(mockName, k -> new ArrayList<>()).add(template);
                 }
             }
             
-            List<String> mockNames = new ArrayList<>(mocksInSystem.keySet());
-            mockNames.sort(String::compareToIgnoreCase);
+            // Сортируем шаблоны внутри каждой группы mock
+            templatesByMock.values().forEach(templates -> 
+                templates.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+            );
             
             // Создаем список заглушек с шаблонами
+            List<String> mockNames = new ArrayList<>(templatesByMock.keySet());
+            mockNames.sort(String::compareToIgnoreCase);
             List<MockWithTemplates> mocksWithTemplates = new ArrayList<>();
             for (String mockName : mockNames) {
-                List<Template> templates = mocksInSystem.get(mockName);
-                templates.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
-                mocksWithTemplates.add(new MockWithTemplates(mockName, templates));
+                mocksWithTemplates.add(new MockWithTemplates(mockName, templatesByMock.get(mockName)));
             }
             
-            model.addAttribute("selectedSystem", system);
+            // Получаем ID шаблонов, используемых в сценарии
+            Set<String> usedTemplateIds = new HashSet<>();
+            for (var step : scenario.getSteps()) {
+                if (step.getTemplateId() != null) {
+                    usedTemplateIds.add(step.getTemplateId());
+                }
+            }
+            
+            model.addAttribute("groups", groups);
+            model.addAttribute("scenario", scenario);
             model.addAttribute("mocksWithTemplates", mocksWithTemplates);
+            model.addAttribute("usedTemplateIds", new ArrayList<>(usedTemplateIds));
+            return "scenario-edit";
+        } catch (Exception e) {
+            model.addAttribute("error", "Error loading scenario: " + e.getMessage());
+            return "error";
         }
-        
-        model.addAttribute("systems", systems);
-        return "scenario-new";
     }
-    
+
     private boolean isValidTemplate(String systemName) {
         if (systemName == null || systemName.isEmpty()) {
             return false;
@@ -125,90 +344,22 @@ public class ScenarioPageController {
         }
         return systemName;
     }
-    
+
     public static class MockWithTemplates {
         private final String mockName;
         private final List<Template> templates;
-        
+
         public MockWithTemplates(String mockName, List<Template> templates) {
             this.mockName = mockName;
             this.templates = templates;
         }
-        
+
         public String getMockName() {
             return mockName;
         }
-        
+
         public List<Template> getTemplates() {
             return templates;
         }
     }
-
-    @GetMapping("/scenarios/{id}")
-    public String scenarioPage(@PathVariable String id, Model model) {
-        try {
-            Scenario scenario = scenarioService.findById(id)
-                    .orElseThrow(() -> new IllegalArgumentException("Scenario not found: " + id));
-            model.addAttribute("scenario", scenario);
-            return "scenario-detail";
-        } catch (Exception e) {
-            model.addAttribute("error", "Error loading scenario: " + e.getMessage());
-            return "error";
-        }
-    }
-
-    @PostMapping("/scenarios/{id}/execute")
-    public String executeScenario(@PathVariable String id) {
-        try {
-            Scenario scenario = scenarioService.findById(id)
-                    .orElseThrow(() -> new IllegalArgumentException("Scenario not found"));
-
-            LocalDateTime baseTime = LocalDateTime.now();
-            long cumulativeDelay = 0;
-
-            for (var step : scenario.getSteps()) {
-                if (step.getTemplate() == null) {
-                    continue;
-                }
-
-                LocalDateTime scheduledTime;
-                if (step.getScheduledTime() != null) {
-                    scheduledTime = LocalDateTime.ofInstant(step.getScheduledTime(),
-                            java.time.ZoneId.systemDefault());
-                } else {
-                    cumulativeDelay += step.getDelayMs();
-                    scheduledTime = baseTime.plusSeconds(cumulativeDelay / 1000);
-                }
-
-                scheduledConfigService.scheduleUpdate(
-                        step.getTemplate().getSystemName(),
-                        step.getTemplate().getConfig(),
-                        scheduledTime,
-                        "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")"
-                );
-            }
-
-            return "redirect:/scenarios/" + id + "?info=" +
-                   URLEncoder.encode("Scenario execution started", StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            return "redirect:/scenarios/" + id + "?error=" +
-                   URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
-        }
-    }
-
-    @PostMapping("/scenarios/{id}/delete")
-    public String deleteScenario(@PathVariable String id) {
-        try {
-            scenarioService.deleteScenario(id);
-            return "redirect:/scenarios?info=" +
-                   URLEncoder.encode("Сценарий успешно удален", StandardCharsets.UTF_8);
-        } catch (IllegalArgumentException e) {
-            return "redirect:/scenarios?error=" +
-                   URLEncoder.encode("Сценарий не найден", StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            return "redirect:/scenarios?error=" +
-                   URLEncoder.encode("Ошибка при удалении сценария: " + e.getMessage(), StandardCharsets.UTF_8);
-        }
-    }
 }
-

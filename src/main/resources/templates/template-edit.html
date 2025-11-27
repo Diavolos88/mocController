@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title th:text="${template.name}">Template</title>
+    <title>Редактирование шаблона</title>
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -80,19 +80,6 @@
             background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
             box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
         }
-        .nav-link.active {
-            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
-        }
-        .nav-link.active:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(29, 114, 184, 0.4);
-        }
-        .nav-link.mocks.active {
-            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
-            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.4);
-        }
         .nav-link.template {
             background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
             color: white;
@@ -140,47 +127,14 @@
             border-color: #999;
         }
         h1 { 
-            margin: 0 0 8px 0; 
-            font-size: 28px; 
-            font-weight: 600;
-            color: #333; 
-        }
-        .header-info {
-            margin-bottom: 32px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .info-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 8px;
-            color: #666;
-            font-size: 14px;
-        }
-        .info-row:last-child {
-            margin-bottom: 0;
-        }
-        .info-label {
+            margin: 0 0 8px 0;
+            font-size: 28px;
             font-weight: 600;
             color: #333;
-            min-width: 100px;
-        }
-        .info-value {
-            color: #666;
-        }
-        .system-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            background: #e3f2fd;
-            color: #1976d2;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 500;
         }
         section {
-            margin-bottom: 24px;
-            padding: 20px;
+            margin-bottom: 40px;
+            padding: 24px;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
             background: #fafafa;
@@ -189,7 +143,7 @@
             margin-bottom: 0;
         }
         h2 {
-            margin: 0 0 16px 0;
+            margin: 0 0 20px 0;
             font-size: 18px;
             font-weight: 600;
             color: #9c27b0;
@@ -197,99 +151,110 @@
             border-bottom: 2px solid #e0e0e0;
         }
         .param-group {
-            margin-bottom: 12px;
-            padding: 12px;
+            margin-bottom: 20px;
+            padding: 16px;
             background: white;
             border: 1px solid #d0d0d0;
             border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
         .param-group:last-child {
             margin-bottom: 0;
         }
         .param-label {
+            display: block;
             font-weight: 500;
             color: #333;
+            margin-bottom: 8px;
             font-size: 14px;
         }
-        .param-value {
+        .param-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .param-input:focus {
+            outline: none;
+            border-color: #9c27b0;
+            box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.1);
+        }
+        .form-group {
+            margin-bottom: 24px;
+        }
+        .form-group label {
+            display: block;
             font-weight: 500;
             color: #333;
-            font-size: 14px;
-            background: #f5f5f5;
-            padding: 4px 8px;
-            border-radius: 3px;
-        }
-        .param-value.delay {
-            color: #1976d2;
-        }
-        .param-value.string {
-            color: #388e3c;
-        }
-        .param-value.logging {
-            color: #f57c00;
-        }
-        .empty-section {
-            color: #999;
-            font-style: italic;
-            text-align: center;
-            padding: 20px;
+            margin-bottom: 8px;
             font-size: 14px;
         }
-        .actions {
-            margin-top: 32px;
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #9c27b0;
+            box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.1);
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .actions { 
+            margin-top: 24px; 
+            display: flex; 
+            gap: 12px; 
             padding-top: 24px;
             border-top: 1px solid #e0e0e0;
-            display: flex;
-            gap: 12px;
         }
-        .btn {
-            padding: 12px 24px;
+        button { 
+            padding: 12px 24px; 
             border: none;
-            border-radius: 4px;
+            border-radius: 4px; 
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
             transition: all 0.2s;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        .btn:hover {
+        button:hover {
             transform: translateY(-1px);
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
-        .btn-template {
-            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+        .primary,
+        .btn-save { 
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
             color: white;
-            box-shadow: 0 2px 4px rgba(156, 39, 176, 0.2);
+            box-shadow: 0 2px 4px rgba(29, 114, 184, 0.2);
         }
-        .btn-template:hover {
-            background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
-            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+        .primary:hover,
+        .btn-save:hover {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
         }
-        .btn-apply {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+        .secondary { 
+            background: #fff;
+            color: #666;
+            border: 1px solid #d0d0d0;
         }
-        .btn-apply:hover {
-            background: linear-gradient(135deg, #45a049 0%, #388e3c 100%);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        .secondary:hover {
+            background: #f5f5f5;
+            border-color: #999;
         }
-        .btn-secondary {
-            background: #e0e0e0;
-            color: #333;
-        }
-        .btn-secondary:hover {
-            background: #d0d0d0;
-        }
-        .btn-delete {
-            background: #f44336;
-            color: white;
-        }
-        .btn-delete:hover {
-            background: #d32f2f;
+        .empty-section {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
         }
         .error {
             color: #d32f2f;
@@ -307,13 +272,23 @@
             margin-bottom: 20px;
             border: 1px solid #90caf9;
         }
+        .system-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #e3f2fd;
+            color: #1976d2;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
     </style>
 </head>
 <body>
 <div class="fixed-nav">
     <div class="nav-links">
         <div class="nav-links-main">
-            <a href="/" class="nav-link">Заглушки</a>
+            <a href="/" class="nav-link mocks">Заглушки</a>
             <a href="/templates" class="nav-link template active">Шаблоны</a>
             <a href="/scenarios" class="nav-link scenario">Сценарии</a>
         </div>
@@ -324,70 +299,87 @@
 </div>
 
 <div class="container">
-    <a href="/templates" class="back-link">← Назад к списку шаблонов</a>
-    <h1 th:text="${template.name}">Template Name</h1>
+    <a th:href="@{/templates/{id}(id=${template.id})}" class="back-link">← Назад к шаблону</a>
+    <h1>Редактирование шаблона</h1>
     
-    <div class="header-info">
-        <div class="info-row">
-            <span class="info-label">Система:</span>
-            <span class="system-badge" th:text="${template.systemName}">system-name</span>
-        </div>
-        <div class="info-row" th:if="${template.description}">
-            <span class="info-label">Описание:</span>
-            <span class="info-value" th:text="${template.description}"></span>
-        </div>
-        <div class="info-row" th:if="${template.createdAt}">
-            <span class="info-label">Создан:</span>
-            <span class="info-value" th:text="${#temporals.format(template.createdAt, 'dd.MM.yyyy HH:mm')}"></span>
-        </div>
-    </div>
+    <div class="system-badge" th:text="${template.systemName}">system-name</div>
 
     <div th:if="${param.error}" class="error" th:text="${param.error[0]}"></div>
     <div th:if="${param.info}" class="info" th:text="${param.info[0]}"></div>
-    
-    <!-- Delays -->
-    <section th:if="${delays != null && !delays.isEmpty()}">
-        <h2>Задержки (мс)</h2>
-        <div th:each="delay : ${delays}" class="param-group">
-            <span class="param-label" th:text="${delay.key}">delay_key</span>
-            <span class="param-value delay" th:text="${delay.value} + ' мс'">0 мс</span>
-        </div>
-    </section>
 
-    <!-- String Parameters -->
-    <section th:if="${stringParams != null && !stringParams.isEmpty()}">
-        <h2>Строковые параметры</h2>
-        <div th:each="stringParam : ${stringParams}" class="param-group">
-            <span class="param-label" th:text="${stringParam.key}">param_key</span>
-            <span class="param-value string" th:text="${stringParam.value}">value</span>
+    <form id="templateForm" th:action="@{/templates/{id}/edit(id=${template.id})}" method="post">
+        <div class="form-group">
+            <label for="templateName">Название шаблона *</label>
+            <input type="text" 
+                   id="templateName" 
+                   name="name" 
+                   th:value="${template.name}"
+                   required 
+                   maxlength="255"
+                   placeholder="Введите название шаблона"/>
         </div>
-    </section>
 
-    <!-- Logging Level -->
-    <section th:if="${loggingLv != null}">
-        <h2>Уровень логирования</h2>
-        <div class="param-group">
-            <span class="param-label">Уровень логирования</span>
-            <span class="param-value logging" th:text="${loggingLv}">ERROR</span>
+        <div class="form-group">
+            <label for="templateDescription">Описание</label>
+            <textarea id="templateDescription" 
+                      name="description" 
+                      th:text="${template.description}"
+                      placeholder="Описание шаблона (необязательно)"></textarea>
         </div>
-    </section>
 
-    <!-- Empty state -->
-    <section th:if="${(delays == null || delays.isEmpty()) && (stringParams == null || stringParams.isEmpty()) && loggingLv == null}">
-        <div class="empty-section">Конфигурация пуста</div>
-    </section>
-    
-    <div class="actions">
-        <a th:href="@{/templates/{id}/edit(id=${template.id})}" class="btn btn-template" style="text-decoration: none; display: inline-block;">Редактировать</a>
-        <form th:action="@{/templates/{id}/apply(id=${template.id})}" method="post" style="margin: 0;">
-            <input type="hidden" name="systemName" th:value="${template.systemName}"/>
-            <button type="submit" class="btn btn-apply">Применить к заглушке</button>
-        </form>
-        <form th:action="@{/templates/{id}/delete(id=${template.id})}" method="post" style="margin: 0;" 
-              th:onsubmit="return confirm('Вы уверены, что хотите удалить этот шаблон?');">
-            <button type="submit" class="btn btn-delete">Удалить</button>
-        </form>
-    </div>
+        <!-- Delays -->
+        <section th:if="${delays != null && !delays.isEmpty()}">
+            <h2>Задержки (мс)</h2>
+            <div th:each="delay : ${delays}" class="param-group">
+                <label class="param-label" th:text="${delay.key}">delay_key</label>
+                <input type="number" 
+                       class="param-input" 
+                       th:name="'delay_' + ${delay.key}"
+                       th:value="${delay.value}"
+                       th:id="'delay_' + ${delay.key}"
+                       min="0"
+                       step="1"
+                       placeholder="Значение в миллисекундах"/>
+            </div>
+        </section>
+
+        <!-- String Parameters -->
+        <section th:if="${stringParams != null && !stringParams.isEmpty()}">
+            <h2>Строковые параметры</h2>
+            <div th:each="stringParam : ${stringParams}" class="param-group">
+                <label class="param-label" th:text="${stringParam.key}">param_key</label>
+                <input type="text" 
+                       class="param-input" 
+                       th:name="'string_' + ${stringParam.key}"
+                       th:value="${stringParam.value}"
+                       th:id="'string_' + ${stringParam.key}"
+                       placeholder="Значение параметра"/>
+            </div>
+        </section>
+
+        <!-- Logging Level -->
+        <section th:if="${loggingLv != null}">
+            <h2>Уровень логирования</h2>
+            <div class="param-group">
+                <label class="param-label">Уровень логирования</label>
+                <select class="param-input" name="loggingLv" id="loggingLv">
+                    <option value="ERROR" th:selected="${loggingLv == 'ERROR'}">ERROR</option>
+                    <option value="WARN" th:selected="${loggingLv == 'WARN'}">WARN</option>
+                    <option value="INFO" th:selected="${loggingLv == 'INFO'}">INFO</option>
+                    <option value="DEBUG" th:selected="${loggingLv == 'DEBUG'}">DEBUG</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Empty state -->
+        <section th:if="${(delays == null || delays.isEmpty()) && (stringParams == null || stringParams.isEmpty()) && loggingLv == null}">
+            <div class="empty-section">Конфигурация пуста</div>
+        </section>
+
+        <div class="actions">
+            <button type="submit" class="primary">Сохранить изменения</button>
+        </div>
+    </form>
 </div>
 </body>
 </html>

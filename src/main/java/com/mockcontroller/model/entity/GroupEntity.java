@@ -2,20 +2,17 @@ package com.mockcontroller.model.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name = "scenarios", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"group_id", "name"})
-})
-public class ScenarioEntity {
+@Table(name = "groups")
+public class GroupEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, length = 36)
     private String id;
-
-    @Column(name = "group_id", nullable = false, length = 36)
-    private String groupId;
 
     @Column(name = "name", nullable = false, length = 255)
     private String name;
@@ -26,13 +23,15 @@ public class ScenarioEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    public ScenarioEntity() {
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<GroupSystemEntity> systems = new ArrayList<>();
+
+    public GroupEntity() {
         this.createdAt = Instant.now();
     }
 
-    public ScenarioEntity(String groupId, String name, String description) {
+    public GroupEntity(String name, String description) {
         this();
-        this.groupId = groupId;
         this.name = name;
         this.description = description;
     }
@@ -69,12 +68,12 @@ public class ScenarioEntity {
         this.createdAt = createdAt;
     }
 
-    public String getGroupId() {
-        return groupId;
+    public List<GroupSystemEntity> getSystems() {
+        return systems;
     }
 
-    public void setGroupId(String groupId) {
-        this.groupId = groupId;
+    public void setSystems(List<GroupSystemEntity> systems) {
+        this.systems = systems;
     }
 }
 

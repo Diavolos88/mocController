@@ -238,6 +238,9 @@ public class ConfigService {
     }
 
     private String sanitize(String name) {
+        if (name == null) {
+            return "";
+        }
         return name.replaceAll("[^a-zA-Z0-9-_]", "_");
     }
 

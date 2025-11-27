@@ -30,6 +30,25 @@
             margin: 0 auto;
             align-items: center;
             justify-content: center;
+            position: relative;
+        }
+        .nav-links-main {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .nav-links-right {
+            position: absolute;
+            right: 0;
+        }
+        .nav-link.faq {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+        }
+        .nav-link.faq:hover {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
         .nav-link {
             padding: 14px 28px;
@@ -141,6 +160,22 @@
             color: #666;
             font-size: 14px;
         }
+        .step-time {
+            color: #ff9800;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .step-templates {
+            margin-top: 12px;
+        }
+        .step-templates ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        .step-templates li {
+            margin: 4px 0;
+            color: #333;
+        }
         .btn {
             padding: 10px 20px;
             border: none;
@@ -153,12 +188,23 @@
             margin-top: 16px;
             transition: all 0.2s;
         }
-        .btn-scenario {
-            background: #ff9800;
+        .btn-edit {
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
             color: white;
+            box-shadow: 0 2px 4px rgba(29, 114, 184, 0.2);
+        }
+        .btn-edit:hover {
+            background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
+        }
+        .btn-scenario {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(255, 152, 0, 0.2);
         }
         .btn-scenario:hover {
-            background: #f57c00;
+            background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
         }
         .btn-delete {
             background: #f44336;
@@ -177,9 +223,14 @@
 <body>
 <div class="fixed-nav">
     <div class="nav-links">
-        <a href="/" class="nav-link">Заглушки</a>
-        <a href="/templates" class="nav-link template">Шаблоны</a>
-        <a href="/scenarios" class="nav-link scenario active">Сценарии</a>
+        <div class="nav-links-main">
+            <a href="/" class="nav-link">Заглушки</a>
+            <a href="/templates" class="nav-link template">Шаблоны</a>
+            <a href="/scenarios" class="nav-link scenario active">Сценарии</a>
+        </div>
+        <div class="nav-links-right" th:if="${faqUrl != null && !faqUrl.isEmpty()}">
+            <a th:href="${faqUrl}" target="_blank" class="nav-link faq">FAQ</a>
+        </div>
     </div>
 </div>
 
@@ -193,21 +244,28 @@
     
     <div class="timeline">
         <h2>Временная линия:</h2>
-        <div th:each="step, iterStat : ${scenario.steps}" class="step">
+        <!-- Отображаем шаги, сгруппированные по времени -->
+        <div th:each="timeEntry, iterStat : ${stepsByTime}" class="step">
             <div class="step-header">
-                <span class="step-number">Шаг <span th:text="${step.stepOrder}">1</span></span>
-                <span class="step-delay" th:if="${step.delayMs > 0}">
-                    Задержка: <span th:text="${step.delayMs}">0</span> мс
+                <span class="step-number">Шаг <span th:text="${iterStat.index + 1}">1</span></span>
+                <span class="step-time">
+                    <strong>Время начала:</strong> 
+                    <span th:text="${timeEntry.key}">01.01.2025 00:00</span>
                 </span>
             </div>
-            <p th:if="${step.template}">
-                <strong>Шаблон:</strong> <span th:text="${step.template.name}">Template</span><br/>
-                <strong>Система:</strong> <span th:text="${step.template.systemName}">system</span>
-            </p>
+            <div class="step-templates">
+                <strong>Применяемые шаблоны:</strong>
+                <ul>
+                    <li th:each="step : ${timeEntry.value}" th:if="${step.template != null}">
+                        <span th:text="${step.template.systemName + ' - ' + step.template.name}">system - template</span>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
     
     <div class="actions">
+        <a th:href="@{/scenarios/{id}/edit(id=${scenario.id})}" class="btn btn-edit" style="text-decoration: none; display: inline-block;">Редактировать</a>
         <form th:action="@{/scenarios/{id}/execute(id=${scenario.id})}" method="post" style="margin: 0;">
             <button type="submit" class="btn btn-scenario">Выполнить сценарий</button>
         </form>

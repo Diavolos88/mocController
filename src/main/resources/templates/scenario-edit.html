@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Создать сценарий</title>
+    <title>Редактировать сценарий</title>
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -376,42 +376,53 @@
 </div>
 
 <div class="container">
-    <a href="/scenarios" class="back-link">← Назад к списку сценариев</a>
-    <h1>Создать сценарий</h1>
+    <a th:href="@{/scenarios/{id}(id=${scenario.id})}" class="back-link">← Назад к сценарию</a>
+    <h1>Редактировать сценарий</h1>
 
     <div th:if="${param.error}" class="error" th:text="${param.error[0]}"></div>
 
-    <form id="scenarioForm" method="post" action="/scenarios/create">
+    <form id="scenarioForm">
+        <input type="hidden" id="scenarioId" th:value="${scenario.id}"/>
         <div class="form-group">
             <label for="scenarioName">Название сценария *</label>
-            <input type="text" id="scenarioName" name="name" required placeholder="Например: Отказы заглушек" maxlength="255"/>
+            <input type="text" id="scenarioName" name="name" required placeholder="Например: Отказы заглушек" maxlength="255" th:value="${scenario.name}"/>
         </div>
 
         <div class="form-group">
             <label for="scenarioDescription">Описание (необязательно)</label>
-            <textarea id="scenarioDescription" name="description" placeholder="Описание сценария..."></textarea>
+            <textarea id="scenarioDescription" name="description" placeholder="Описание сценария..." th:text="${scenario.description != null ? scenario.description : ''}"></textarea>
         </div>
 
         <div class="form-group system-select">
-            <label for="groupSelect">Выберите группу *</label>
-            <select id="groupSelect" name="group" required onchange="loadGroupTemplates(this.value)">
-                <option value="">-- Выберите группу --</option>
+            <label for="groupSelect">Группа *</label>
+            <select id="groupSelect" name="group" required disabled>
                 <option th:each="group : ${groups}" 
                         th:value="${group.id}" 
-                        th:text="${group.name}">group</option>
+                        th:text="${group.name}"
+                        th:selected="${scenario.groupId == group.id}">group</option>
             </select>
-            <a href="/groups/new" target="_blank" style="margin-left: 12px; font-size: 14px; color: #1d72b8; text-decoration: none;">+ Создать группу</a>
+            <p style="margin-top: 8px; color: #666; font-size: 13px;">Группу нельзя изменить после создания сценария</p>
         </div>
 
-        <!-- Шаблоны для выбранных систем -->
-        <div id="templatesSection" class="templates-section" style="display: none;">
-            <h3>Выбранные шаблоны</h3>
-            <div id="templatesContainer">
-                <!-- Шаблоны будут добавляться динамически -->
+        <!-- Шаблоны для группы -->
+        <div id="templatesSection" th:if="${mocksWithTemplates != null && !mocksWithTemplates.isEmpty()}" class="templates-section">
+            <h3>Шаблоны для группы</h3>
+            
+            <div th:each="mockWithTemplates : ${mocksWithTemplates}" class="mock-group">
+                <h4 th:text="${mockWithTemplates.mockName}">mock-name</h4>
+                <div th:each="template : ${mockWithTemplates.templates}" class="template-checkbox">
+                    <input type="checkbox" 
+                           th:id="'template_' + ${template.id}"
+                           th:value="${template.id}"
+                           class="template-checkbox-input"
+                           th:checked="${usedTemplateIds != null && usedTemplateIds.contains(template.id)}"/>
+                    <label th:for="'template_' + ${template.id}" th:text="${mockWithTemplates.mockName + ' - ' + template.name}">Mock Name - Template Name</label>
+                    <div class="template-info" th:if="${template.description}" th:text="${template.description}"></div>
+                </div>
             </div>
         </div>
 
-        <div id="emptyState" class="empty-state">
+        <div th:if="${selectedSystem == null}" class="empty-state">
             <p>Выберите систему, чтобы увидеть доступные шаблоны</p>
         </div>
 
@@ -425,168 +436,172 @@
         </div>
 
         <div class="actions">
-            <button type="submit" class="btn btn-save">Создать сценарий</button>
+            <button type="submit" class="btn btn-save">Сохранить изменения</button>
         </div>
     </form>
 </div>
 
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const scenarioData = {
+        id: /*[[${scenario.id}]]*/ '',
+        name: /*[[${scenario.name}]]*/ '',
+        description: /*[[${scenario.description != null ? scenario.description : ''}]]*/ '',
+        steps: [
+            /*[# th:each="step, iterStat : ${scenario.steps}"]*/
+            {
+                id: /*[[${step.id}]]*/ '',
+                templateId: /*[[${step.templateId != null ? step.templateId : ''}]]*/ '',
+                scheduledTime: /*[[${step.scheduledTime != null ? step.scheduledTime.toString() : 'null'}]]*/ 'null'
+            }/*[# th:if="${!iterStat.last}"]*/,/*[/]*/
+            /*[/]*/
+        ],
+        usedTemplateIds: [
+            /*[# th:if="${usedTemplateIds != null && !usedTemplateIds.isEmpty()}"]*/
+            /*[# th:each="templateId, iterStat : ${usedTemplateIds}"]*/
+            /*[[${templateId}]]*//*[# th:if="${!iterStat.last}"]*/,/*[/]*/
+            /*[/]*/
+            /*[/]*/
+        ]
+    };
+    /*]]>*/
+</script>
+
 <script>
     let timePointCounter = 0;
 
-    // Храним выбранные шаблоны
-    const allSelectedTemplates = new Map(); // templateId -> {id, name, mockName, system}
-    
-    // Функция для загрузки шаблонов из группы
-    function loadGroupTemplates(groupId) {
-        if (!groupId || groupId === '') {
-            // Если группа не выбрана, скрываем секцию шаблонов
-            document.getElementById('templatesSection').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'block';
-            // Очищаем контейнер шаблонов
-            document.getElementById('templatesContainer').innerHTML = '';
-            allSelectedTemplates.clear();
+    function loadTemplatesForSystem(system) {
+        const scenarioId = document.getElementById('scenarioId').value;
+        if (system) {
+            window.location.href = '/scenarios/' + scenarioId + '/edit?system=' + encodeURIComponent(system);
+        } else {
+            window.location.href = '/scenarios/' + scenarioId + '/edit';
+        }
+    }
+
+    // Преобразуем scheduledTime (Instant) в день и время
+    function parseScheduledTime(scheduledTimeStr) {
+        if (!scheduledTimeStr) return { day: 0, time: '00:00' };
+        
+        // Формат: "HH:mm:ss dd-MM-yyyy"
+        const parts = scheduledTimeStr.split(' ');
+        if (parts.length !== 2) return { day: 0, time: '00:00' };
+        
+        const timePart = parts[0]; // HH:mm:ss
+        const datePart = parts[1]; // dd-MM-yyyy
+        
+        const [hours, minutes] = timePart.split(':');
+        const time = hours + ':' + minutes;
+        
+        // Вычисляем день относительно сегодня
+        const [day, month, year] = datePart.split('-').map(Number);
+        const today = new Date();
+        const targetDate = new Date(year, month - 1, day);
+        const diffTime = targetDate - today;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        return { day: Math.max(0, diffDays), time: time };
+    }
+
+    // Инициализация существующих временных точек
+    function initializeTimePoints() {
+        if (!scenarioData || !scenarioData.steps || scenarioData.steps.length === 0) {
             return;
         }
         
-        // Загружаем информацию о группе
-        fetch('/api/groups/' + encodeURIComponent(groupId))
-            .then(response => response.json())
-            .then(group => {
-                if (!group || !group.systemNames || group.systemNames.length === 0) {
-                    document.getElementById('templatesSection').style.display = 'none';
-                    document.getElementById('emptyState').style.display = 'block';
-                    document.getElementById('emptyState').innerHTML = '<p>В выбранной группе нет систем</p>';
-                    return;
+        // Группируем шаги по времени
+        const stepsByTime = {};
+        scenarioData.steps.forEach((step) => {
+            if (!step.templateId) {
+                return; // Пропускаем шаги без templateId
+            }
+            
+            let timeKey = '00:00';
+            let day = 0;
+            
+            if (step.scheduledTime && step.scheduledTime !== 'null' && step.scheduledTime !== null) {
+                try {
+                    // Преобразуем Instant (ISO строка) в Date
+                    // Instant приходит в формате ISO 8601, например: "2025-11-27T12:00:00Z"
+                    const instant = new Date(step.scheduledTime);
+                    
+                    // Проверяем, что дата валидна
+                    if (isNaN(instant.getTime())) {
+                        return;
+                    }
+                    
+                    // Получаем локальное время
+                    const year = instant.getFullYear();
+                    const month = String(instant.getMonth() + 1).padStart(2, '0');
+                    const dayNum = String(instant.getDate()).padStart(2, '0');
+                    const hours = String(instant.getHours()).padStart(2, '0');
+                    const minutes = String(instant.getMinutes()).padStart(2, '0');
+                    
+                    // Вычисляем день относительно сегодня
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const targetDate = new Date(year, parseInt(month) - 1, parseInt(dayNum));
+                    targetDate.setHours(0, 0, 0, 0);
+                    const diffTime = targetDate - today;
+                    day = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+                    timeKey = hours + ':' + minutes;
+                } catch (e) {
+                    return; // Пропускаем этот шаг
                 }
-                
-                // Очищаем предыдущие шаблоны
-                document.getElementById('templatesContainer').innerHTML = '';
-                allSelectedTemplates.clear();
-                
-                // Загружаем шаблоны для всех систем из группы параллельно
-                const loadPromises = group.systemNames.map(system => 
-                    fetch('/api/templates/by-system/' + encodeURIComponent(system))
-                        .then(response => response.json())
-                        .then(templates => ({ system, templates }))
-                        .catch(error => {
-                            console.error('Ошибка при загрузке шаблонов для системы:', system, error);
-                            return { system, templates: [] };
-                        })
-                );
-                
-                Promise.all(loadPromises)
-                    .then(results => {
-                        // Группируем все шаблоны по mock
-                        const mockGroups = {};
-                        results.forEach(({ system, templates }) => {
-                            templates.forEach(template => {
-                                const mockName = template.systemName || 'Другие';
-                                if (!mockGroups[mockName]) {
-                                    mockGroups[mockName] = [];
-                                }
-                                mockGroups[mockName].push({ ...template, system });
-                            });
-                        });
-                        
-                        // Отображаем шаблоны
-                        const templatesContainer = document.getElementById('templatesContainer');
-                        const templatesSection = document.getElementById('templatesSection');
-                        const emptyState = document.getElementById('emptyState');
-                        
-                        if (Object.keys(mockGroups).length === 0) {
-                            templatesSection.style.display = 'none';
-                            emptyState.style.display = 'block';
-                            emptyState.innerHTML = '<p>Нет шаблонов для систем в выбранной группе</p>';
-                            return;
-                        }
-                        
-                        // Показываем секцию шаблонов
-                        templatesSection.style.display = 'block';
-                        emptyState.style.display = 'none';
-                        
-                        // Добавляем группы mock
-                        Object.entries(mockGroups).forEach(([mockName, templatesList]) => {
-                            const mockGroupDiv = document.createElement('div');
-                            mockGroupDiv.className = 'mock-group';
-                            mockGroupDiv.setAttribute('data-mock-name', mockName);
-                            
-                            const h4 = document.createElement('h4');
-                            h4.textContent = mockName;
-                            mockGroupDiv.appendChild(h4);
-                            
-                            // Добавляем шаблоны в группу
-                            templatesList.forEach(template => {
-                                // Сохраняем информацию о шаблоне
-                                allSelectedTemplates.set(template.id, {
-                                    id: template.id,
-                                    name: template.name,
-                                    mockName: mockName,
-                                    system: template.system
-                                });
-                                
-                                // Создаем чекбокс для шаблона
-                                const templateCheckbox = document.createElement('div');
-                                templateCheckbox.className = 'template-checkbox';
-                                
-                                const checkbox = document.createElement('input');
-                                checkbox.type = 'checkbox';
-                                checkbox.id = 'template_' + template.id;
-                                checkbox.value = template.id;
-                                checkbox.className = 'template-checkbox-input';
-                                checkbox.addEventListener('change', function() {
-                                    updateAllTimePoints();
-                                });
-                                
-                                const label = document.createElement('label');
-                                label.htmlFor = 'template_' + template.id;
-                                label.textContent = mockName + ' - ' + template.name;
-                                
-                                templateCheckbox.appendChild(checkbox);
-                                templateCheckbox.appendChild(label);
-                                
-                                if (template.description) {
-                                    const info = document.createElement('div');
-                                    info.className = 'template-info';
-                                    info.textContent = template.description;
-                                    templateCheckbox.appendChild(info);
-                                }
-                                
-                                mockGroupDiv.appendChild(templateCheckbox);
-                            });
-                            
-                            templatesContainer.appendChild(mockGroupDiv);
-                        });
-                        
-                        // Обновляем все временные точки
-                        updateAllTimePoints();
-                    })
-                    .catch(error => {
-                        console.error('Ошибка при загрузке шаблонов группы:', error);
-                        alert('Ошибка при загрузке шаблонов для группы');
-                    });
-            })
-            .catch(error => {
-                console.error('Ошибка при загрузке группы:', error);
-                alert('Ошибка при загрузке группы');
-            });
-    }
-    
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+            }
+            
+            const key = day + '_' + timeKey;
+            if (!stepsByTime[key]) {
+                stepsByTime[key] = { day: day, time: timeKey, templateIds: [] };
+            }
+            if (step.templateId) {
+                stepsByTime[key].templateIds.push(step.templateId);
+            }
+        });
+        
+        // Сортируем по дню и времени
+        const sortedTimePoints = Object.values(stepsByTime).sort((a, b) => {
+            if (a.day !== b.day) return a.day - b.day;
+            const [aHours, aMinutes] = a.time.split(':').map(Number);
+            const [bHours, bMinutes] = b.time.split(':').map(Number);
+            if (aHours !== bHours) return aHours - bHours;
+            return aMinutes - bMinutes;
+        });
+        
+        // Создаем временные точки
+        if (sortedTimePoints.length === 0) {
+            return;
+        }
+        
+        // Проверяем, что секция шаблонов загружена перед созданием временных точек
+        const templatesSection = document.getElementById('templatesSection');
+        if (!templatesSection) {
+            setTimeout(() => {
+                sortedTimePoints.forEach((timePoint) => {
+                    addTimePointWithData(timePoint.day, timePoint.time, timePoint.templateIds);
+                });
+            }, 300);
+            return;
+        }
+        
+        sortedTimePoints.forEach((timePoint) => {
+            addTimePointWithData(timePoint.day, timePoint.time, timePoint.templateIds);
+        });
     }
 
     function addTimePoint() {
+        addTimePointWithData(0, '00:00', []);
+    }
+
+    function addTimePointWithData(day, time, templateIds) {
         timePointCounter++;
         const container = document.getElementById('timePointsContainer');
         const timePointDiv = document.createElement('div');
         timePointDiv.className = 'time-point';
         timePointDiv.id = 'timePoint_' + timePointCounter;
         
-        // Получаем все доступные шаблоны (только выбранные в основной секции)
-        const availableTemplates = getAvailableTemplates([]);
+        // Получаем все доступные шаблоны
+        const availableTemplates = getAvailableTemplates(templateIds);
         
         timePointDiv.innerHTML = `
             <div class="time-point-header">
@@ -600,7 +615,7 @@
                        id="timePoint_${timePointCounter}_day"
                        placeholder="0"
                        min="0"
-                       value="0"
+                       value="${day}"
                        style="width: 80px;"
                        required/>
                 <label style="width: auto; margin: 0; font-weight: 500; margin-left: 12px;">Время (HH:mm):</label>
@@ -610,6 +625,7 @@
                        placeholder="00:00"
                        pattern="[0-9]{2}:[0-9]{2}"
                        maxlength="5"
+                       value="${time}"
                        required/>
             </div>
             <div>
@@ -622,6 +638,16 @@
         
         container.appendChild(timePointDiv);
         
+        // Отмечаем выбранные шаблоны
+        if (templateIds && templateIds.length > 0) {
+            templateIds.forEach(templateId => {
+                const checkbox = document.getElementById('timePoint_' + timePointCounter + '_template_' + templateId);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+        }
+        
         // Добавляем маску для времени
         const timeInput = document.getElementById('timePoint_' + timePointCounter + '_time');
         timeInput.addEventListener('input', function(e) {
@@ -631,6 +657,30 @@
                 value = value.substring(0, 2) + ':' + value.substring(2);
             }
             e.target.value = value;
+        });
+    }
+    
+    // Функция для обновления всех временных точек при изменении выбора шаблонов
+    function updateAllTimePoints() {
+        const timePointElements = document.querySelectorAll('.time-point');
+        timePointElements.forEach(timePoint => {
+            const templatesContainer = timePoint.querySelector('[id^="timePoint_"][id$="_templates"]');
+            if (templatesContainer) {
+                // Сохраняем выбранные шаблоны в этой временной точке
+                const selectedCheckboxes = templatesContainer.querySelectorAll('input[type="checkbox"]:checked');
+                const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+                
+                // Обновляем список шаблонов
+                templatesContainer.innerHTML = getAvailableTemplates(selectedIds);
+                
+                // Восстанавливаем выбранные шаблоны
+                selectedIds.forEach(templateId => {
+                    const checkbox = templatesContainer.querySelector(`input[value="${templateId}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
         });
     }
 
@@ -643,46 +693,20 @@
 
     function getAvailableTemplates(selectedTemplateIds) {
         const templatesSection = document.getElementById('templatesSection');
-        if (!templatesSection) return '<p style="color: #999; font-style: italic;">Сначала выберите группу</p>';
+        if (!templatesSection) {
+            // Если секция шаблонов еще не загружена, возвращаем сообщение
+            // При инициализации это нормально, шаблоны загрузятся позже
+            return '<p style="color: #999; font-style: italic;">Шаблоны будут доступны после выбора системы</p>';
+        }
         
-        // Получаем только выбранные шаблоны
+        // Получаем только выбранные шаблоны из основной секции
         const checkedCheckboxes = templatesSection.querySelectorAll('.template-checkbox-input:checked');
         
         if (checkedCheckboxes.length === 0) {
             return '<p style="color: #999; font-style: italic;">Сначала выберите шаблоны выше</p>';
         }
         
-        let html = '';
-        checkedCheckboxes.forEach(checkbox => {
-            const label = checkbox.nextElementSibling;
-            const templateId = checkbox.value;
-            const fullLabelText = label.textContent.trim();
-            
-            // Получаем информацию о группе (mock) для группировки
-            const mockGroup = checkbox.closest('.mock-group');
-            const mockName = mockGroup ? (mockGroup.querySelector('h4') || mockGroup.querySelector('h3'))?.textContent.trim() : '';
-            
-            // Если в label уже есть формат "mockName - templateName", используем его
-            // Иначе формируем из mockName и templateName
-            let displayText = fullLabelText;
-            if (mockName && !fullLabelText.includes(' - ')) {
-                displayText = `${mockName} - ${fullLabelText}`;
-            }
-            
-            const isChecked = selectedTemplateIds && selectedTemplateIds.includes(templateId) ? 'checked' : '';
-            html += `
-                <div class="template-checkbox">
-                    <input type="checkbox" 
-                           name="timePoint_${timePointCounter}_templates" 
-                           value="${templateId}"
-                           id="timePoint_${timePointCounter}_template_${templateId}"
-                           ${isChecked}/>
-                    <label for="timePoint_${timePointCounter}_template_${templateId}" style="margin: 0;">${displayText}</label>
-                </div>
-            `;
-        });
-        
-        // Группируем по mock группам, если они есть
+        // Группируем по mock группам
         const mockGroups = {};
         checkedCheckboxes.forEach(checkbox => {
             const mockGroup = checkbox.closest('.mock-group');
@@ -692,37 +716,29 @@
                     mockGroups[mockName] = [];
                 }
                 const label = checkbox.nextElementSibling;
-                const labelText = label.textContent.trim();
-                // Если в label уже есть формат "mockName - templateName", используем его
-                // Иначе формируем из mockName и templateName
-                let templateName = labelText;
-                if (!labelText.includes(' - ')) {
-                    templateName = `${mockName} - ${labelText}`;
-                }
+                const labelText = label ? label.textContent.trim() : '';
                 mockGroups[mockName].push({
                     id: checkbox.value,
-                    name: templateName
+                    name: labelText
                 });
             }
         });
         
-        // Если есть группы, формируем HTML с группировкой
+        // Формируем HTML с группировкой
         if (Object.keys(mockGroups).length > 0) {
             let groupedHtml = '';
             for (const [mockName, templates] of Object.entries(mockGroups)) {
-                groupedHtml += `<div class="mock-group" style="margin-bottom: 12px;"><h3 style="margin: 0 0 8px 0; font-size: 14px; color: #1d72b8;">${mockName}</h3><div class="template-checkbox-group">`;
+                groupedHtml += `<div class="mock-group" style="margin-bottom: 12px;"><h3 style="margin: 0 0 8px 0; font-size: 14px; color: #1d72b8;">${escapeHtml(mockName)}</h3><div class="template-checkbox-group">`;
                 templates.forEach(template => {
-                    // Формируем текст в формате "mockName - templateName"
-                    const displayText = template.name.includes(' - ') ? template.name : `${mockName} - ${template.name}`;
                     const isChecked = selectedTemplateIds && selectedTemplateIds.includes(template.id) ? 'checked' : '';
                     groupedHtml += `
                         <div class="template-checkbox">
                             <input type="checkbox" 
                                    name="timePoint_${timePointCounter}_templates" 
-                                   value="${template.id}"
-                                   id="timePoint_${timePointCounter}_template_${template.id}"
+                                   value="${escapeHtml(template.id)}"
+                                   id="timePoint_${timePointCounter}_template_${escapeHtml(template.id)}"
                                    ${isChecked}/>
-                            <label for="timePoint_${timePointCounter}_template_${template.id}" style="margin: 0;">${displayText}</label>
+                            <label for="timePoint_${timePointCounter}_template_${escapeHtml(template.id)}" style="margin: 0;">${escapeHtml(template.name)}</label>
                         </div>
                     `;
                 });
@@ -731,13 +747,21 @@
             return groupedHtml;
         }
         
-        return html;
+        return '<p style="color: #999; font-style: italic;">Нет доступных шаблонов</p>';
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // Обработка отправки формы
     document.getElementById('scenarioForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
+        const scenarioId = document.getElementById('scenarioId').value;
         const scenarioName = document.getElementById('scenarioName').value.trim();
         if (!scenarioName) {
             alert('Введите название сценария');
@@ -746,7 +770,7 @@
         
         const groupSelect = document.getElementById('groupSelect');
         if (!groupSelect || !groupSelect.value) {
-            alert('Выберите группу');
+            alert('Группа обязательна');
             return;
         }
         
@@ -831,7 +855,6 @@
         });
         
         // Создаем запрос
-        // Для временных точек используем сегодняшнюю дату + указанный день
         const today = new Date();
         const baseYear = today.getFullYear();
         const baseMonth = today.getMonth();
@@ -858,18 +881,14 @@
         });
         
         const requestBody = {
-            groupId: groupSelect.value,
             name: scenarioName,
             description: document.getElementById('scenarioDescription').value.trim() || null,
             steps: steps
         };
         
-        // Логируем для отладки
-        console.log('Отправка запроса на создание сценария:', requestBody);
-        
-        // Отправляем запрос
-        fetch('/api/scenarios', {
-            method: 'POST',
+        // Отправляем PUT запрос
+        fetch('/api/scenarios/' + scenarioId, {
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -880,64 +899,50 @@
                 return response.json();
             } else {
                 return response.text().then(text => {
-                    console.error('Ошибка сервера:', response.status, text);
-                    throw new Error(text || 'Ошибка при создании сценария');
+                    throw new Error(text || 'Ошибка при обновлении сценария');
                 });
             }
         })
         .then(data => {
-            console.log('Сценарий успешно создан:', data);
-            window.location.href = '/scenarios/' + data.id + '?info=' + encodeURIComponent('Сценарий успешно создан');
+            window.location.href = '/scenarios/' + data.id + '?info=' + encodeURIComponent('Сценарий успешно обновлен');
         })
         .catch(error => {
-            console.error('Ошибка:', error);
-            alert('Ошибка при создании сценария: ' + error.message);
+            alert('Ошибка при обновлении сценария: ' + error.message);
         });
     });
-    
-    // Функция для обновления всех временных точек при изменении выбора шаблонов
-    function updateAllTimePoints() {
-        const timePointElements = document.querySelectorAll('.time-point');
-        timePointElements.forEach(timePoint => {
-            const templatesContainer = timePoint.querySelector('[id^="timePoint_"][id$="_templates"]');
-            if (templatesContainer) {
-                // Сохраняем выбранные шаблоны в этой временной точке
-                const selectedCheckboxes = templatesContainer.querySelectorAll('input[type="checkbox"]:checked');
-                const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
-                
-                // Обновляем список шаблонов
-                templatesContainer.innerHTML = getAvailableTemplates(selectedIds);
-                
-                // Восстанавливаем выбранные шаблоны
-                selectedIds.forEach(templateId => {
-                    const checkbox = templatesContainer.querySelector(`input[value="${templateId}"]`);
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        // Отмечаем все используемые шаблоны в основной секции
+        if (scenarioData && scenarioData.usedTemplateIds && scenarioData.usedTemplateIds.length > 0) {
+            setTimeout(() => {
+                scenarioData.usedTemplateIds.forEach(templateId => {
+                    const checkbox = document.getElementById('template_' + templateId);
                     if (checkbox) {
                         checkbox.checked = true;
                     }
                 });
-            }
-        });
-    }
-    
-    // Инициализация при загрузке страницы
-    document.addEventListener('DOMContentLoaded', function() {
-        // Если есть выбранная группа при загрузке страницы, загружаем её шаблоны
-        const groupSelect = document.getElementById('groupSelect');
-        if (groupSelect && groupSelect.value) {
-            loadGroupTemplates(groupSelect.value);
+            }, 50);
         }
         
+        // Инициализируем временные точки с задержкой, чтобы секция шаблонов успела загрузиться
+        setTimeout(() => {
+            initializeTimePoints();
+        }, 300);
+        
         // Добавляем обработчики изменения чекбоксов в основной секции
-        // Используем делегирование событий для динамически добавляемых элементов
-        const templatesSection = document.getElementById('templatesSection');
-        if (templatesSection) {
-            templatesSection.addEventListener('change', function(e) {
-                if (e.target.classList.contains('template-checkbox-input')) {
-                    // Обновляем все временные точки при изменении выбора
-                    updateAllTimePoints();
-                }
-            });
-        }
+        setTimeout(() => {
+            const templatesSection = document.getElementById('templatesSection');
+            if (templatesSection) {
+                const checkboxes = templatesSection.querySelectorAll('.template-checkbox-input');
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        // Обновляем все временные точки при изменении выбора
+                        updateAllTimePoints();
+                    });
+                });
+            }
+        }, 400);
     });
 </script>
 </body>

@@ -3,11 +3,20 @@ package com.mockcontroller.model;
 import java.util.List;
 
 public class ScenarioRequest {
+    private String groupId;
     private String name;
     private String description;
     private List<ScenarioStepRequest> steps;
 
     public ScenarioRequest() {
+    }
+
+    public String getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
     }
 
     public String getName() {

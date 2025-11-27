@@ -71,8 +71,14 @@ public class ScenarioService {
     }
 
     @Transactional
-    public Scenario createScenario(String name, String description, List<ScenarioStep> steps) {
+    public Scenario createScenario(String groupId, String name, String description, List<ScenarioStep> steps) {
+        // Проверяем уникальность комбинации groupId + name
+        if (scenarioRepository.existsByGroupIdAndName(groupId, name)) {
+            throw new IllegalArgumentException("Сценарий с таким названием уже существует в этой группе");
+        }
+        
         ScenarioEntity entity = new ScenarioEntity();
+        entity.setGroupId(groupId);
         entity.setName(name);
         entity.setDescription(description);
         entity.setCreatedAt(Instant.now());
@@ -100,10 +106,16 @@ public class ScenarioService {
     }
 
     @Transactional
-    public Scenario updateScenario(String id, String name, String description, List<ScenarioStep> steps) {
+    public Scenario updateScenario(String id, String groupId, String name, String description, List<ScenarioStep> steps) {
         ScenarioEntity entity = scenarioRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Scenario not found: " + id));
 
+        // Проверяем уникальность комбинации groupId + name (исключая текущий сценарий)
+        if (scenarioRepository.existsByGroupIdAndNameAndIdNot(groupId, name, id)) {
+            throw new IllegalArgumentException("Сценарий с таким названием уже существует в этой группе");
+        }
+
+        entity.setGroupId(groupId);
         entity.setName(name);
         entity.setDescription(description);
         entity = scenarioRepository.save(entity);
