@@ -113,18 +113,17 @@ public class ConfigService {
         int incomingVersionInt = parseVersion(incomingVersion);
 
         if (currentOpt.isEmpty()) {
-            // Конфига нет - если версия 1, сохраняем как новый стартовый конфиг
-            if (incomingVersionInt == 1) {
-                StoredConfigEntity entity = new StoredConfigEntity();
-                entity.setSystemName(sanitizedName);
-                entity.setStartConfigJson(jsonToString(incomingConfig));
-                entity.setCurrentConfigJson(jsonToString(incomingConfig));
-                entity.setUpdatedAt(Instant.now());
-                entity.setVersion(1);
-                repository.save(entity);
-                return new CheckUpdateResponse(false, "v1");
-            }
-            return new CheckUpdateResponse(false, null);
+            // Конфига нет - сохраняем как новый стартовый конфиг
+            // Если версия выше 1, используем её, иначе ставим 1
+            int versionToUse = incomingVersionInt >= 1 ? incomingVersionInt : 1;
+            StoredConfigEntity entity = new StoredConfigEntity();
+            entity.setSystemName(sanitizedName);
+            entity.setStartConfigJson(jsonToString(incomingConfig));
+            entity.setCurrentConfigJson(jsonToString(incomingConfig));
+            entity.setUpdatedAt(Instant.now());
+            entity.setVersion(versionToUse);
+            repository.save(entity);
+            return new CheckUpdateResponse(false, "v" + versionToUse);
         }
 
         StoredConfigEntity current = currentOpt.get();
@@ -164,16 +163,26 @@ public class ConfigService {
         JsonNode incoming = request.getConfig();
 
         if (currentOpt.isEmpty()) {
-            // Первая регистрация
+            // Первая регистрация или регистрация после удаления
+            // Если в запросе есть версия и она выше 1, используем её, иначе ставим 1
+            String requestVersion = request.getVersion();
+            int versionToUse = 1;
+            if (requestVersion != null && !requestVersion.trim().isEmpty()) {
+                int parsedVersion = parseVersion(requestVersion);
+                if (parsedVersion > 1) {
+                    versionToUse = parsedVersion;
+                }
+            }
+            
             StoredConfigEntity entity = new StoredConfigEntity();
             entity.setSystemName(sanitizedName);
             entity.setStartConfigJson(jsonToString(incoming));
             entity.setCurrentConfigJson(jsonToString(incoming));
             entity.setUpdatedAt(Instant.now());
-            entity.setVersion(1);
+            entity.setVersion(versionToUse);
             repository.save(entity);
             return new ConfigSyncResponse(SyncStatus.START_REGISTERED,
-                    "Start config saved", "v1");
+                    "Start config saved", "v" + versionToUse);
         }
 
         StoredConfigEntity current = currentOpt.get();

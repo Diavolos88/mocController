@@ -11,6 +11,9 @@ public class ConfigRequest {
     @JsonProperty(value = "config", required = true)
     private JsonNode config;
 
+    @JsonProperty(value = "version", required = false)
+    private String version;
+
     public String getSystemName() {
         return systemName;
     }
@@ -25,5 +28,13 @@ public class ConfigRequest {
 
     public void setConfig(JsonNode config) {
         this.config = config;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 }
