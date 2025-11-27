@@ -844,25 +844,29 @@
             updateChangedStyle(input);
         });
 
+        // Функция валидации delays
+        function validateDelays(formData) {
+            const errors = [];
+            for (const [key, value] of formData.entries()) {
+                if (key.startsWith('delay_')) {
+                    if (value && value.trim() !== '') {
+                        const numValue = Number(value);
+                        if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 0) {
+                            const fieldName = key.substring(6);
+                            errors.push(`Поле "${fieldName}" должно быть целым неотрицательным числом`);
+                        }
+                    }
+                }
+            }
+            return errors;
+        }
+
         // Валидация формы перед отправкой
         const configForm = document.getElementById('configForm');
         if (configForm) {
             configForm.addEventListener('submit', function(e) {
                 const formData = new FormData(configForm);
-                const errors = [];
-                
-                // Валидация delays - должны быть числовыми
-                for (const [key, value] of formData.entries()) {
-                    if (key.startsWith('delay_')) {
-                        if (value && value.trim() !== '') {
-                            const numValue = Number(value);
-                            if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 0) {
-                                const fieldName = key.substring(6);
-                                errors.push(`Поле "${fieldName}" должно быть целым неотрицательным числом`);
-                            }
-                        }
-                    }
-                }
+                const errors = validateDelays(formData);
                 
                 if (errors.length > 0) {
                     e.preventDefault();
@@ -1095,19 +1099,7 @@
                 
                 // Валидация delays - должны быть числовыми
                 const formData = new FormData(configForm);
-                const errors = [];
-                
-                for (const [key, value] of formData.entries()) {
-                    if (key.startsWith('delay_')) {
-                        if (value && value.trim() !== '') {
-                            const numValue = Number(value);
-                            if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 0) {
-                                const fieldName = key.substring(6);
-                                errors.push(`Поле "${fieldName}" должно быть целым неотрицательным числом`);
-                            }
-                        }
-                    }
-                }
+                const errors = validateDelays(formData);
                 
                 if (errors.length > 0) {
                     e.preventDefault();
@@ -1116,7 +1108,6 @@
                 }
 
                 // Копируем все данные из configForm в scheduleForm
-                const configForm = document.getElementById('configForm');
                 if (configForm) {
                     const configFormData = new FormData(configForm);
                     
