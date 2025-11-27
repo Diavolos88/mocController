@@ -233,7 +233,7 @@ public class ConfigPageController {
                 }
             });
             
-            // РР·РІР»РµРєР°РµРј stringParams
+            // Извлекаем stringParams
             Map<String, String> stringParams = new HashMap<>();
             allParams.forEach((key, value) -> {
                 if (key.startsWith("string_")) {
@@ -241,11 +241,19 @@ public class ConfigPageController {
                 }
             });
             
+            // Извлекаем intParams
+            Map<String, String> intParams = new HashMap<>();
+            allParams.forEach((key, value) -> {
+                if (key.startsWith("int_")) {
+                    intParams.put(key.substring(4), value);
+                }
+            });
+            
             // Извлекаем loggingLv
             String loggingLv = allParams.get("loggingLv");
             
             try {
-                boolean hasChanges = configService.updateConfigFromForm(decodedName, delays, stringParams, loggingLv);
+                boolean hasChanges = configService.updateConfigFromForm(decodedName, delays, stringParams, intParams, loggingLv);
                 if (!hasChanges) {
                     return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + 
                            "?info=" + java.net.URLEncoder.encode("Изменений не было, конфиг не обновлен", StandardCharsets.UTF_8);
