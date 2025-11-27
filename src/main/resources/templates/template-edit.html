@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Редактирование шаблона</title>
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -295,8 +296,9 @@
             <a href="/templates" class="nav-link template active">Шаблоны</a>
             <a href="/scenarios" class="nav-link scenario">Сценарии</a>
         </div>
-        <div class="nav-links-right" th:if="${faqUrl != null && !faqUrl.isEmpty()}">
-            <a th:href="${faqUrl}" target="_blank" class="nav-link faq">FAQ</a>
+        <div class="nav-links-right">
+            <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
+            <a th:if="${faqUrl != null && !faqUrl.isEmpty()}" th:href="${faqUrl}" target="_blank" class="nav-link faq">FAQ</a>
         </div>
     </div>
 </div>
@@ -384,6 +386,7 @@
         </div>
     </form>
 </div>
+<script th:src="@{/js/theme.js}"></script>
 <script th:src="@{/js/theme.js}"></script>
 </body>
 </html>
