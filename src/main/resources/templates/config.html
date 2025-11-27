@@ -1157,29 +1157,47 @@
         // Инициализируем toggle switches для булевых переменных
         document.querySelectorAll('.boolean-toggle').forEach(function(toggle) {
             const targetId = toggle.getAttribute('data-target-id');
+            if (!targetId) return;
+            
             const hiddenInput = document.getElementById(targetId);
-            if (hiddenInput) {
-                // Синхронизируем checkbox с hidden input
-                toggle.addEventListener('change', function() {
-                    hiddenInput.value = this.checked ? 'true' : 'false';
-                    const valueText = this.closest('.boolean-toggle-wrapper').querySelector('.boolean-value-text');
-                    if (valueText) {
-                        valueText.textContent = this.checked ? 'true' : 'false';
-                    }
-                    updateChangedStyle(hiddenInput);
-                });
-            }
+            if (!hiddenInput) return;
+            
+            // Синхронизируем checkbox с hidden input
+            toggle.addEventListener('change', function() {
+                hiddenInput.value = this.checked ? 'true' : 'false';
+                const wrapper = this.closest('.boolean-toggle-wrapper');
+                const valueText = wrapper?.querySelector('.boolean-value-text');
+                if (valueText) {
+                    valueText.textContent = this.checked ? 'true' : 'false';
+                }
+                updateChangedStyle(hiddenInput);
+            });
         });
 
         // Функция для проверки и обновления стиля измененных полей
         function updateChangedStyle(input) {
+            if (!input || !input.id) return;
+            
             const originalValue = originalValues.get(input.id);
             const currentValue = input.value;
             
             if (originalValue !== currentValue) {
                 input.classList.add('changed');
+                // Для булевых переменных также подсвечиваем toggle
+                if (input.id.startsWith('boolean_')) {
+                    const toggle = document.querySelector(`.boolean-toggle[data-target-id="${input.id}"]`);
+                    if (toggle) {
+                        toggle.closest('.boolean-toggle-wrapper')?.classList.add('changed');
+                    }
+                }
             } else {
                 input.classList.remove('changed');
+                if (input.id.startsWith('boolean_')) {
+                    const toggle = document.querySelector(`.boolean-toggle[data-target-id="${input.id}"]`);
+                    if (toggle) {
+                        toggle.closest('.boolean-toggle-wrapper')?.classList.remove('changed');
+                    }
+                }
             }
         }
 
