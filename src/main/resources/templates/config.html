@@ -99,6 +99,19 @@
             background: #2d2d2d;
             border-color: #404040;
         }
+        body.dark-theme .toggle-slider {
+            background-color: #555;
+        }
+        body.dark-theme .toggle-switch input:checked + .toggle-slider {
+            background-color: #1d72b8;
+        }
+        body.dark-theme .boolean-value-text {
+            color: #e0e0e0;
+        }
+        body.dark-theme .boolean-toggle-wrapper.changed {
+            background-color: #1a3a5c;
+            border-color: #1d72b8;
+        }
         
         body.dark-theme .param-label {
             color: #e0e0e0;
@@ -435,12 +448,78 @@
         .param-group:last-child {
             margin-bottom: 0;
         }
+        .param-group.boolean-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
         .param-label {
             display: block;
             font-weight: 500;
             color: #333;
             margin-bottom: 8px;
             font-size: 14px;
+        }
+        .param-label.boolean-label {
+            margin-bottom: 4px;
+        }
+        .boolean-toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+            margin: 0;
+            cursor: pointer;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #1d72b8;
+        }
+        .toggle-switch input:focus + .toggle-slider {
+            box-shadow: 0 0 1px #1d72b8;
+        }
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        .boolean-value-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            min-width: 40px;
+        }
+        .start-value.boolean-start-value {
+            margin-top: 4px;
         }
         .param-input {
             width: 100%;
@@ -977,17 +1056,24 @@
         <!-- Boolean Variables -->
         <section th:if="${!configView.booleanVariables.isEmpty()}">
             <h2>Булевы переменные</h2>
-            <div th:each="boolVar : ${configView.booleanVariables}" class="param-group">
-                <label class="param-label" th:text="${boolVar.key}">boolean_key</label>
-                <select class="param-select"
-                        th:name="'boolean_' + ${boolVar.key}"
-                        th:id="'boolean_' + ${boolVar.key}"
-                        required>
-                    <option value="true" th:selected="${boolVar.value == 'true'}">true</option>
-                    <option value="false" th:selected="${boolVar.value == 'false'}">false</option>
-                </select>
+            <div th:each="boolVar : ${configView.booleanVariables}" class="param-group boolean-group">
+                <label class="param-label boolean-label" th:text="${boolVar.key}">boolean_key</label>
+                <div class="boolean-toggle-wrapper">
+                    <input type="hidden" 
+                           th:name="'boolean_' + ${boolVar.key}"
+                           th:id="'boolean_' + ${boolVar.key}"
+                           th:value="${boolVar.value}"/>
+                    <label class="toggle-switch">
+                        <input type="checkbox" 
+                               class="boolean-toggle"
+                               th:data-target-id="'boolean_' + ${boolVar.key}"
+                               th:checked="${boolVar.value == 'true' || boolVar.value == true}"/>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="boolean-value-text" th:text="${boolVar.value == 'true' || boolVar.value == true ? 'true' : 'false'}">false</span>
+                </div>
                 <div th:if="${boolVar.startValue != null && boolVar.startValue != boolVar.value}" 
-                     class="start-value" 
+                     class="start-value boolean-start-value" 
                      th:data-target-id="'boolean_' + ${boolVar.key}"
                      th:data-start-value="${boolVar.startValue}">
                     <span class="start-value-label">Стартовое:</span>
@@ -1062,10 +1148,27 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Сохраняем исходные значения всех полей
         const originalValues = new Map();
-        const allInputs = document.querySelectorAll('input[type="number"], input[type="text"], select');
+        const allInputs = document.querySelectorAll('input[type="number"], input[type="text"], select, input[type="hidden"][id^="boolean_"]');
         
         allInputs.forEach(function(input) {
             originalValues.set(input.id, input.value);
+        });
+        
+        // Инициализируем toggle switches для булевых переменных
+        document.querySelectorAll('.boolean-toggle').forEach(function(toggle) {
+            const targetId = toggle.getAttribute('data-target-id');
+            const hiddenInput = document.getElementById(targetId);
+            if (hiddenInput) {
+                // Синхронизируем checkbox с hidden input
+                toggle.addEventListener('change', function() {
+                    hiddenInput.value = this.checked ? 'true' : 'false';
+                    const valueText = this.closest('.boolean-toggle-wrapper').querySelector('.boolean-value-text');
+                    if (valueText) {
+                        valueText.textContent = this.checked ? 'true' : 'false';
+                    }
+                    updateChangedStyle(hiddenInput);
+                });
+            }
         });
 
         // Функция для проверки и обновления стиля измененных полей
@@ -1627,12 +1730,19 @@
             // Применяем booleanVariables
             if (templateConfig.booleanVariables) {
                 for (const [key, value] of Object.entries(templateConfig.booleanVariables)) {
-                    const select = document.querySelector(`select[name="boolean_${key}"]`);
-                    if (select) {
-                        const boolValue = value === true || value === "true" ? "true" : "false";
-                        select.value = boolValue;
-                        select.classList.add('changed');
-                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                    const hiddenInput = document.querySelector(`input[type="hidden"][name="boolean_${key}"]`);
+                    const toggle = document.querySelector(`.boolean-toggle[data-target-id="boolean_${key}"]`);
+                    if (hiddenInput && toggle) {
+                        const boolValue = value === true || value === "true";
+                        hiddenInput.value = boolValue ? "true" : "false";
+                        toggle.checked = boolValue;
+                        const valueText = toggle.closest('.boolean-toggle-wrapper').querySelector('.boolean-value-text');
+                        if (valueText) {
+                            valueText.textContent = boolValue ? "true" : "false";
+                        }
+                        hiddenInput.classList.add('changed');
+                        toggle.closest('.boolean-toggle-wrapper').classList.add('changed');
+                        toggle.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 }
             }
