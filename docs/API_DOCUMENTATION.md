@@ -827,6 +827,11 @@ POST /configs/auth-mock?action=delete
     "environment": "test",
     "region": "us-east"
   },
+  "intParams": {
+    "maxRetries": 3,
+    "timeoutSeconds": 30,
+    "batchSize": 100
+  },
   "loggingLv": "ERROR"
 }
 ```
@@ -834,6 +839,7 @@ POST /configs/auth-mock?action=delete
 **Поля:**
 - `delays` (object) - задержки в миллисекундах (целочисленные неотрицательные значения, обязательны для валидации)
 - `stringParams` (object) - строковые параметры (любые строковые значения)
+- `intParams` (object) - целочисленные параметры (любые целые числа, могут быть отрицательными)
 - `loggingLv` (string) - уровень логирования, возможные значения:
   - `ERROR`
   - `WARN`
@@ -843,6 +849,7 @@ POST /configs/auth-mock?action=delete
 **Валидация:**
 - Все значения в `delays` должны быть целыми неотрицательными числами (≥ 0)
 - Значения в `stringParams` могут быть любыми строками
+- Значения в `intParams` должны быть целыми числами (могут быть отрицательными)
 - Валидация выполняется как на клиенте (JavaScript), так и на сервере (Java)
 - При нарушении валидации возвращается ошибка с описанием проблемы
 

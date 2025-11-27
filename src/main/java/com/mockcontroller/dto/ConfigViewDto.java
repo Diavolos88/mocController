@@ -8,6 +8,7 @@ public class ConfigViewDto {
     private String configVersion;
     private List<ConfigParamDto> delays = new ArrayList<>();
     private List<ConfigParamDto> stringParams = new ArrayList<>();
+    private List<ConfigParamDto> intParams = new ArrayList<>();
     private ConfigParamDto loggingLevel;
 
     public ConfigViewDto() {
@@ -43,6 +44,14 @@ public class ConfigViewDto {
 
     public void setStringParams(List<ConfigParamDto> stringParams) {
         this.stringParams = stringParams;
+    }
+
+    public List<ConfigParamDto> getIntParams() {
+        return intParams;
+    }
+
+    public void setIntParams(List<ConfigParamDto> intParams) {
+        this.intParams = intParams;
     }
 
     public ConfigParamDto getLoggingLevel() {

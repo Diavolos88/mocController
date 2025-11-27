@@ -911,6 +911,27 @@
         </section>
 
         <!-- String Parameters -->
+        <section th:if="${!configView.intParams.isEmpty()}">
+            <h2>Целочисленные параметры</h2>
+            <div th:each="intParam : ${configView.intParams}" class="param-group">
+                <label class="param-label" th:text="${intParam.key}">int_key</label>
+                <input type="number" 
+                       class="param-input" 
+                       th:name="'int_' + ${intParam.key}"
+                       th:id="'int_' + ${intParam.key}"
+                       th:value="${intParam.value}"
+                       th:data-target-id="'int_' + ${intParam.key}"
+                       placeholder="Введите целое число">
+                <div th:if="${intParam.startValue != null && intParam.startValue != intParam.value}" 
+                     class="start-value" 
+                     th:data-target-id="'int_' + ${intParam.key}"
+                     th:data-start-value="${intParam.startValue}">
+                    <span class="start-value-label">Стартовое:</span>
+                    <span th:text="${intParam.startValue}">start_value</span>
+                </div>
+            </div>
+        </section>
+
         <section th:if="${!configView.stringParams.isEmpty()}">
             <h2>Строковые параметры</h2>
             <div th:each="stringParam : ${configView.stringParams}" class="param-group">

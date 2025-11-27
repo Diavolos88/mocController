@@ -347,6 +347,25 @@ public class ConfigService {
             });
         }
         
+        JsonNode currentIntParams = current.get("intParams");
+        JsonNode startIntParams = start != null ? start.get("intParams") : null;
+        if (currentIntParams != null && currentIntParams.isObject()) {
+            currentIntParams.fields().forEachRemaining(entry -> {
+                ConfigParamDto param = new ConfigParamDto();
+                param.setKey(entry.getKey());
+                param.setValue(entry.getValue().asText());
+                param.setType("int");
+                
+                if (startIntParams != null && startIntParams.has(entry.getKey())) {
+                    param.setStartValue(startIntParams.get(entry.getKey()).asText());
+                } else {
+                    param.setStartValue(entry.getValue().asText());
+                }
+                
+                dto.getIntParams().add(param);
+            });
+        }
+        
         JsonNode currentLogging = current.get("loggingLv");
         JsonNode startLogging = start != null ? start.get("loggingLv") : null;
         if (currentLogging != null) {
@@ -408,6 +427,21 @@ public class ConfigService {
         }
         newConfig.set("stringParams", stringParamsNode);
         
+        ObjectNode intParamsNode = objectMapper.createObjectNode();
+        if (intParams != null) {
+            intParams.forEach((key, value) -> {
+                if (value != null && !value.isEmpty()) {
+                    try {
+                        int intValue = Integer.parseInt(value);
+                        intParamsNode.put(key, intValue);
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Значение целочисленного параметра '" + key + "' должно быть целым числом, получено: " + value);
+                    }
+                }
+            });
+        }
+        newConfig.set("intParams", intParamsNode);
+        
         if (loggingLv != null && !loggingLv.isEmpty()) {
             newConfig.put("loggingLv", loggingLv);
         }
@@ -464,7 +498,7 @@ public class ConfigService {
         }
     }
 
-    public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, String loggingLv) {
+    public JsonNode createConfigFromForm(Map<String, String> delays, Map<String, String> stringParams, Map<String, String> intParams, String loggingLv) {
         ObjectNode newConfig = objectMapper.createObjectNode();
         
         ObjectNode delaysNode = objectMapper.createObjectNode();
@@ -494,6 +528,21 @@ public class ConfigService {
             });
         }
         newConfig.set("stringParams", stringParamsNode);
+        
+        ObjectNode intParamsNode = objectMapper.createObjectNode();
+        if (intParams != null) {
+            intParams.forEach((key, value) -> {
+                if (value != null && !value.isEmpty()) {
+                    try {
+                        int intValue = Integer.parseInt(value);
+                        intParamsNode.put(key, intValue);
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Значение целочисленного параметра '" + key + "' должно быть целым числом, получено: " + value);
+                    }
+                }
+            });
+        }
+        newConfig.set("intParams", intParamsNode);
         
         if (loggingLv != null && !loggingLv.isEmpty()) {
             newConfig.put("loggingLv", loggingLv);
