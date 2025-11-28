@@ -50,8 +50,29 @@ public class ScenarioPageController {
             groupsMap.put(g.getId(), g);
         }
         
-        // Группируем сценарии
+        // Группируем сценарии и считаем уникальные временные точки для каждого
+        Map<String, Integer> scenarioTimePointsCount = new HashMap<>();
         for (Scenario scenario : allScenarios) {
+            // Считаем уникальные временные точки для сценария
+            Map<String, List<ScenarioStep>> stepsByTime = new LinkedHashMap<>();
+            for (ScenarioStep step : scenario.getSteps()) {
+                String timeKey;
+                if (step.getScheduledTime() != null) {
+                    LocalDateTime localDateTime = LocalDateTime.ofInstant(
+                        step.getScheduledTime(), 
+                        java.time.ZoneId.systemDefault()
+                    );
+                    timeKey = localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+                } else {
+                    long delayMs = step.getDelayMs();
+                    long hours = delayMs / (1000 * 60 * 60);
+                    long minutes = (delayMs % (1000 * 60 * 60)) / (1000 * 60);
+                    timeKey = String.format("%02d:%02d", hours, minutes);
+                }
+                stepsByTime.computeIfAbsent(timeKey, k -> new ArrayList<>()).add(step);
+            }
+            scenarioTimePointsCount.put(scenario.getId(), stepsByTime.size());
+            
             String groupId = scenario.getGroupId();
             if (groupId == null) {
                 groupId = "Без группы";
@@ -79,6 +100,7 @@ public class ScenarioPageController {
         model.addAttribute("currentGroup", currentGroup);
         model.addAttribute("scenarios", currentScenarios);
         model.addAttribute("allGroups", allGroups);
+        model.addAttribute("scenarioTimePointsCount", scenarioTimePointsCount);
         return "scenarios";
     }
 
