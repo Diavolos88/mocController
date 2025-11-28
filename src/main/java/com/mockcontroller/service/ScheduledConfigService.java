@@ -75,7 +75,10 @@ public class ScheduledConfigService {
         }
         // Используем санитизированное имя для консистентности
         String safeSystemName = sanitize(systemName);
+        LocalDateTime now = LocalDateTime.now();
+        // Возвращаем только будущие обновления (которые еще не наступили)
         return repository.findBySystemNameOrderByScheduledTimeAsc(safeSystemName).stream()
+                .filter(entity -> entity.getScheduledTime().isAfter(now))
                 .map(mapper::toModel)
                 .collect(Collectors.toList());
     }
@@ -103,8 +106,11 @@ public class ScheduledConfigService {
             ScheduledConfigUpdate update = mapper.toModel(entity);
             try {
                 String systemName = update.getSystemName() != null ? update.getSystemName() : "unknown";
+                logger.info("Applying scheduled update for {} at {} (scheduled: {})", 
+                    systemName, now, entity.getScheduledTime());
                 configService.updateCurrentConfig(systemName, update.getNewConfig());
                 if (update.getId() != null) {
+                    logger.info("Deleting scheduled update {} after successful application", update.getId());
                     repository.deleteById(update.getId());
                 }
             } catch (Exception e) {

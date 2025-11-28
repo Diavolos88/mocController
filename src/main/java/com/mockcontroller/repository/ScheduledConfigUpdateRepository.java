@@ -16,6 +16,8 @@ public interface ScheduledConfigUpdateRepository extends JpaRepository<Scheduled
     
     boolean existsBySystemName(String systemName);
     
+    // Находим обновления, которые должны быть применены (время наступило или прошло)
+    // Используем <= для того, чтобы захватить обновления, которые уже должны были быть применены
     @Query("SELECT s FROM ScheduledConfigUpdateEntity s WHERE s.scheduledTime <= :now ORDER BY s.scheduledTime ASC")
     List<ScheduledConfigUpdateEntity> findDueUpdates(LocalDateTime now);
     
