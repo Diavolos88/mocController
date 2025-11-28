@@ -30,11 +30,14 @@ public class ConfigService {
     private final ObjectMapper objectMapper;
     private final StoredConfigRepository repository;
     private final ConfigMapper mapper;
+    private final GroupService groupService;
 
-    public ConfigService(ObjectMapper objectMapper, StoredConfigRepository repository, ConfigMapper mapper) {
+    public ConfigService(ObjectMapper objectMapper, StoredConfigRepository repository, 
+                        ConfigMapper mapper, GroupService groupService) {
         this.objectMapper = objectMapper;
         this.repository = repository;
         this.mapper = mapper;
+        this.groupService = groupService;
     }
 
     public Collection<StoredConfig> findAll() {
@@ -123,6 +126,10 @@ public class ConfigService {
             entity.setUpdatedAt(Instant.now());
             entity.setVersion(versionToUse);
             repository.save(entity);
+            
+            // Автоматическое создание/обновление группы для моков с шаблоном system-integration-mock
+            autoCreateOrUpdateGroup(request.getSystemName());
+            
             return new CheckUpdateResponse(false, "v" + versionToUse);
         }
 
@@ -181,6 +188,10 @@ public class ConfigService {
             entity.setUpdatedAt(Instant.now());
             entity.setVersion(versionToUse);
             repository.save(entity);
+            
+            // Автоматическое создание/обновление группы для моков с шаблоном system-integration-mock
+            autoCreateOrUpdateGroup(request.getSystemName());
+            
             return new ConfigSyncResponse(SyncStatus.START_REGISTERED,
                     "Start config saved", "v" + versionToUse);
         }
@@ -259,6 +270,91 @@ public class ConfigService {
         }
     }
 
+    /**
+     * Автоматически создает или обновляет группу для моков, следующих шаблону system-integration-mock.
+     * Если мок соответствует шаблону, извлекается название системы и:
+     * - Если группы с таким названием нет - создается группа и добавляется мок
+     * - Если группа существует, но мока в ней нет - мок добавляется в группу
+     */
+    @Transactional
+    private void autoCreateOrUpdateGroup(String systemName) {
+        if (systemName == null || systemName.isEmpty()) {
+            return;
+        }
+        
+        // Проверяем, соответствует ли мок шаблону system-integration-mock
+        if (!isValidTemplate(systemName)) {
+            return;
+        }
+        
+        // Извлекаем название системы (до первого тире)
+        String groupName = extractSystemPrefix(systemName);
+        if (groupName == null || groupName.isEmpty()) {
+            return;
+        }
+        
+        // Ищем группу с таким названием (без учета регистра)
+        Optional<com.mockcontroller.model.Group> groupOpt = groupService.findByName(groupName);
+        
+        if (groupOpt.isEmpty()) {
+            // Группы нет - создаем новую группу с этим моком
+            groupService.createGroup(
+                groupName,
+                "Автоматически созданная группа для системы " + groupName,
+                java.util.Collections.singletonList(systemName)
+            );
+        } else {
+            // Группа существует - проверяем, есть ли в ней этот мок
+            com.mockcontroller.model.Group group = groupOpt.get();
+            if (!group.getSystemNames().contains(systemName)) {
+                // Мока нет в группе - добавляем его
+                java.util.List<String> updatedSystems = new java.util.ArrayList<>(group.getSystemNames());
+                updatedSystems.add(systemName);
+                groupService.updateGroup(
+                    group.getId(),
+                    group.getName(),
+                    group.getDescription(),
+                    updatedSystems
+                );
+            }
+        }
+    }
+    
+    /**
+     * Проверяет, соответствует ли название мока шаблону system-integration-mock.
+     * Шаблон: минимум 2 тире и заканчивается на -mock
+     */
+    private boolean isValidTemplate(String systemName) {
+        if (systemName == null || systemName.isEmpty()) {
+            return false;
+        }
+        // Шаблон: название_системы-название_эмуляции-mock
+        // Должно быть минимум 2 тире и заканчиваться на -mock
+        int dashCount = 0;
+        for (char c : systemName.toCharArray()) {
+            if (c == '-') {
+                dashCount++;
+            }
+        }
+        return dashCount >= 2 && systemName.endsWith("-mock");
+    }
+    
+    /**
+     * Извлекает название системы из шаблона system-integration-mock.
+     * Возвращает часть до первого тире.
+     */
+    private String extractSystemPrefix(String systemName) {
+        if (systemName == null || systemName.isEmpty()) {
+            return systemName;
+        }
+        // Берем первое слово до первого тире
+        int firstDashIndex = systemName.indexOf('-');
+        if (firstDashIndex > 0) {
+            return systemName.substring(0, firstDashIndex);
+        }
+        return systemName;
+    }
+    
     private String sanitize(String name) {
         if (name == null) {
             return "";
