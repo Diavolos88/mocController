@@ -49,17 +49,18 @@ public class GroupService {
         entity.setName(name);
         entity.setDescription(description);
         entity.setCreatedAt(Instant.now());
-        entity = repository.save(entity);
 
-        // Добавляем системы в группу
-        if (systemNames != null) {
+        // Добавляем системы в группу перед сохранением
+        if (systemNames != null && !systemNames.isEmpty()) {
             for (String systemName : systemNames) {
-                GroupSystemEntity systemEntity = new GroupSystemEntity(entity, systemName);
-                entity.getSystems().add(systemEntity);
+                if (systemName != null && !systemName.trim().isEmpty()) {
+                    GroupSystemEntity systemEntity = new GroupSystemEntity(entity, systemName);
+                    entity.getSystems().add(systemEntity);
+                }
             }
         }
+        
         entity = repository.save(entity);
-
         return mapper.toModel(entity);
     }
 
@@ -76,10 +77,12 @@ public class GroupService {
         entity.getSystems().clear();
         
         // Добавляем новые системы
-        if (systemNames != null) {
+        if (systemNames != null && !systemNames.isEmpty()) {
             for (String systemName : systemNames) {
-                GroupSystemEntity systemEntity = new GroupSystemEntity(entity, systemName);
-                entity.getSystems().add(systemEntity);
+                if (systemName != null && !systemName.trim().isEmpty()) {
+                    GroupSystemEntity systemEntity = new GroupSystemEntity(entity, systemName);
+                    entity.getSystems().add(systemEntity);
+                }
             }
         }
         

@@ -45,24 +45,20 @@ public class GroupPageController {
 
     @GetMapping("/new")
     public String newGroupPage(Model model) {
-        // Получаем все доступные системы из заглушек
+        // Получаем все доступные заглушки (полные имена)
         Collection<com.mockcontroller.model.StoredConfig> configs = configService.findAll();
-        Set<String> allSystems = new HashSet<>();
+        List<String> allMocks = new ArrayList<>();
         
         for (com.mockcontroller.model.StoredConfig config : configs) {
             String systemName = config.getSystemName();
-            if (isValidTemplate(systemName)) {
-                String systemPrefix = extractSystemPrefix(systemName);
-                allSystems.add(systemPrefix);
-            } else {
-                allSystems.add(systemName);
+            if (systemName != null && !systemName.isEmpty()) {
+                allMocks.add(systemName);
             }
         }
         
-        List<String> systems = new ArrayList<>(allSystems);
-        systems.sort(String::compareToIgnoreCase);
+        allMocks.sort(String::compareToIgnoreCase);
         
-        model.addAttribute("systems", systems);
+        model.addAttribute("systems", allMocks);
         model.addAttribute("faqUrl", getFaqUrl());
         return "group-new";
     }
@@ -85,25 +81,21 @@ public class GroupPageController {
             Group group = groupService.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Group not found: " + id));
             
-            // Получаем все доступные системы из заглушек
+            // Получаем все доступные заглушки (полные имена)
             Collection<com.mockcontroller.model.StoredConfig> configs = configService.findAll();
-            Set<String> allSystems = new HashSet<>();
+            List<String> allMocks = new ArrayList<>();
             
             for (com.mockcontroller.model.StoredConfig config : configs) {
                 String systemName = config.getSystemName();
-                if (isValidTemplate(systemName)) {
-                    String systemPrefix = extractSystemPrefix(systemName);
-                    allSystems.add(systemPrefix);
-                } else {
-                    allSystems.add(systemName);
+                if (systemName != null && !systemName.isEmpty()) {
+                    allMocks.add(systemName);
                 }
             }
             
-            List<String> systems = new ArrayList<>(allSystems);
-            systems.sort(String::compareToIgnoreCase);
+            allMocks.sort(String::compareToIgnoreCase);
             
             model.addAttribute("group", group);
-            model.addAttribute("systems", systems);
+            model.addAttribute("systems", allMocks);
             model.addAttribute("faqUrl", getFaqUrl());
             return "group-edit";
         } catch (IllegalArgumentException e) {
@@ -149,27 +141,6 @@ public class GroupPageController {
         } catch (Exception e) {
             return "redirect:/status?error=" + URLEncoder.encode("Ошибка при удалении заглушки из группы: " + e.getMessage(), StandardCharsets.UTF_8);
         }
-    }
-
-    private boolean isValidTemplate(String systemName) {
-        if (systemName == null || systemName.isEmpty()) {
-            return false;
-        }
-        int dashCount = 0;
-        for (char c : systemName.toCharArray()) {
-            if (c == '-') {
-                dashCount++;
-            }
-        }
-        return dashCount >= 2 && systemName.endsWith("-mock");
-    }
-
-    private String extractSystemPrefix(String systemName) {
-        int firstDashIndex = systemName.indexOf('-');
-        if (firstDashIndex > 0) {
-            return systemName.substring(0, firstDashIndex);
-        }
-        return systemName;
     }
 }
 

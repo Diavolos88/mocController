@@ -43,7 +43,12 @@ public class ConfigService {
     public Collection<StoredConfig> findAll() {
         return repository.findAll().stream()
                 .map(mapper::toModel)
-                .sorted((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()))
+                .filter(config -> config.getSystemName() != null)
+                .sorted((a, b) -> {
+                    String nameA = a.getSystemName() != null ? a.getSystemName() : "";
+                    String nameB = b.getSystemName() != null ? b.getSystemName() : "";
+                    return nameA.compareToIgnoreCase(nameB);
+                })
                 .collect(Collectors.toList());
     }
 
