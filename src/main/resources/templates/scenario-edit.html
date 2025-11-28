@@ -528,17 +528,6 @@
             window.location.href = '/scenarios/' + scenarioId + '/edit';
         }
     }
-    
-    // Обработчик изменения группы - перезагружаем страницу для загрузки шаблонов новой группы
-    document.addEventListener('DOMContentLoaded', function() {
-        const groupSelect = document.getElementById('groupSelect');
-        if (groupSelect) {
-            groupSelect.addEventListener('change', function() {
-                const scenarioId = document.getElementById('scenarioId').value;
-                window.location.href = '/scenarios/' + scenarioId + '/edit';
-            });
-        }
-    });
 
     // Преобразуем scheduledTime (Instant) в день и время
     function parseScheduledTime(scheduledTimeStr) {
