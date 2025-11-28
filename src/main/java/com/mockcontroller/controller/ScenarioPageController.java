@@ -276,20 +276,34 @@ public class ScenarioPageController {
             Collection<Template> allTemplates = templateService.findAll();
             Map<String, List<Template>> templatesByMock = new LinkedHashMap<>();
             
+            // Извлекаем уникальные префиксы систем из группы (для шаблонов system-integration-mock)
+            Set<String> groupSystemPrefixes = new HashSet<>();
+            for (String groupSystem : groupSystems) {
+                if (isValidTemplate(groupSystem)) {
+                    String systemPrefix = extractSystemPrefix(groupSystem);
+                    groupSystemPrefixes.add(systemPrefix);
+                } else {
+                    // Если не соответствует шаблону, используем полное имя
+                    groupSystemPrefixes.add(groupSystem);
+                }
+            }
+            
             for (Template template : allTemplates) {
                 String systemName = template.getSystemName();
                 // Проверяем, принадлежит ли шаблон системе из группы
                 boolean belongsToGroup = false;
-                for (String groupSystem : groupSystems) {
-                    if (isValidTemplate(systemName)) {
-                        String systemPrefix = extractSystemPrefix(systemName);
-                        if (systemPrefix.equals(groupSystem)) {
-                            belongsToGroup = true;
-                            break;
-                        }
-                    } else if (systemName.equals(groupSystem)) {
+                String templatePrefix = null;
+                
+                if (isValidTemplate(systemName)) {
+                    templatePrefix = extractSystemPrefix(systemName);
+                    // Сравниваем префикс шаблона с префиксами систем из группы
+                    if (groupSystemPrefixes.contains(templatePrefix)) {
                         belongsToGroup = true;
-                        break;
+                    }
+                } else {
+                    // Если шаблон не соответствует формату, сравниваем полное имя
+                    if (groupSystemPrefixes.contains(systemName)) {
+                        belongsToGroup = true;
                     }
                 }
                 
