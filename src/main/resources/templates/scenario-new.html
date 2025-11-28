@@ -480,6 +480,35 @@
     const allSelectedTemplates = new Map(); // templateId -> {id, name, mockName, system}
     
     // Функция для загрузки шаблонов из группы
+    // Проверяет, соответствует ли название мока шаблону system-integration-mock
+    function isValidTemplateName(systemName) {
+        if (!systemName || systemName === '') {
+            return false;
+        }
+        // Шаблон: название_системы-название_эмуляции-mock
+        // Должно быть минимум 2 тире и заканчиваться на -mock
+        let dashCount = 0;
+        for (let i = 0; i < systemName.length; i++) {
+            if (systemName[i] === '-') {
+                dashCount++;
+            }
+        }
+        return dashCount >= 2 && systemName.endsWith('-mock');
+    }
+    
+    // Извлекает название системы из шаблона system-integration-mock
+    function extractSystemPrefix(systemName) {
+        if (!systemName || systemName === '') {
+            return systemName;
+        }
+        // Берем первое слово до первого тире
+        const firstDashIndex = systemName.indexOf('-');
+        if (firstDashIndex > 0) {
+            return systemName.substring(0, firstDashIndex);
+        }
+        return systemName;
+    }
+    
     function loadGroupTemplates(groupId) {
         if (!groupId || groupId === '') {
             // Если группа не выбрана, скрываем секцию шаблонов
@@ -514,12 +543,25 @@
                 }
                 
                 // Загружаем шаблоны для всех систем из группы параллельно
-                const loadPromises = group.systemNames.map(system => 
-                    fetch('/api/templates/by-system/' + encodeURIComponent(system))
+                // Извлекаем уникальные префиксы систем (для шаблонов system-integration-mock)
+                const systemPrefixes = new Set();
+                group.systemNames.forEach(system => {
+                    // Проверяем, соответствует ли шаблону system-integration-mock
+                    if (isValidTemplateName(system)) {
+                        const prefix = extractSystemPrefix(system);
+                        systemPrefixes.add(prefix);
+                    } else {
+                        // Если не соответствует шаблону, используем полное имя
+                        systemPrefixes.add(system);
+                    }
+                });
+                
+                const loadPromises = Array.from(systemPrefixes).map(systemPrefix => 
+                    fetch('/api/templates/by-system/' + encodeURIComponent(systemPrefix))
                         .then(response => response.json())
-                        .then(templates => ({ system, templates }))
+                        .then(templates => ({ systemPrefix, templates }))
                         .catch(() => {
-                            return { system, templates: [] };
+                            return { systemPrefix, templates: [] };
                         })
                 );
                 
@@ -527,13 +569,13 @@
                     .then(results => {
                         // Группируем все шаблоны по mock
                         const mockGroups = {};
-                        results.forEach(({ system, templates }) => {
+                        results.forEach(({ systemPrefix, templates }) => {
                             templates.forEach(template => {
                                 const mockName = template.systemName || 'Другие';
                                 if (!mockGroups[mockName]) {
                                     mockGroups[mockName] = [];
                                 }
-                                mockGroups[mockName].push({ ...template, system });
+                                mockGroups[mockName].push({ ...template, system: systemPrefix });
                             });
                         });
                         
