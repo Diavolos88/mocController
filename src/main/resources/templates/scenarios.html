@@ -420,7 +420,7 @@
         </form>
         <h2 th:text="${scenario.name}">Scenario Name</h2>
         <p th:if="${scenario.description}" th:text="${scenario.description}">Description</p>
-        <p><strong>Шагов:</strong> <span th:text="${#lists.size(scenario.steps)}">0</span></p>
+        <p><strong>Шагов:</strong> <span th:text="${scenarioTimePointsCount != null && scenarioTimePointsCount.containsKey(scenario.id) ? scenarioTimePointsCount.get(scenario.id) : #lists.size(scenario.steps)}">0</span></p>
         <div class="card-actions">
             <div class="card-actions-left">
                 <a th:href="@{/scenarios/{id}(id=${scenario.id})}" class="btn btn-scenario btn-view">Просмотр</a>
