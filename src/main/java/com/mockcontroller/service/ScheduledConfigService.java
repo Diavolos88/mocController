@@ -42,7 +42,8 @@ public class ScheduledConfigService {
 
     @Transactional
     public ScheduledConfigUpdate scheduleUpdate(String systemName, JsonNode newConfig, LocalDateTime scheduledTime, String comment) {
-        String safeSystemName = systemName != null ? systemName : "";
+        // Используем санитизированное имя для консистентности с ConfigService
+        String safeSystemName = sanitize(systemName != null ? systemName : "");
         ScheduledConfigUpdateEntity entity = new ScheduledConfigUpdateEntity(
             safeSystemName, 
             jsonToString(newConfig), 
@@ -51,19 +52,30 @@ public class ScheduledConfigService {
         entity = repository.save(entity);
         return mapper.toModel(entity);
     }
+    
+    private String sanitize(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.replaceAll("[^a-zA-Z0-9-_]", "_");
+    }
 
     public boolean hasScheduledUpdate(String systemName) {
         if (systemName == null || systemName.trim().isEmpty()) {
             return false;
         }
-        return repository.existsBySystemName(systemName);
+        // Используем санитизированное имя для консистентности
+        String safeSystemName = sanitize(systemName);
+        return repository.existsBySystemName(safeSystemName);
     }
 
     public List<ScheduledConfigUpdate> getScheduledUpdates(String systemName) {
         if (systemName == null || systemName.trim().isEmpty()) {
             return List.of();
         }
-        return repository.findBySystemNameOrderByScheduledTimeAsc(systemName).stream()
+        // Используем санитизированное имя для консистентности
+        String safeSystemName = sanitize(systemName);
+        return repository.findBySystemNameOrderByScheduledTimeAsc(safeSystemName).stream()
                 .map(mapper::toModel)
                 .collect(Collectors.toList());
     }
@@ -107,7 +119,9 @@ public class ScheduledConfigService {
     @Transactional
     public void deleteAllBySystemName(String systemName) {
         if (systemName != null && !systemName.trim().isEmpty()) {
-            repository.deleteBySystemName(systemName);
+            // Используем санитизированное имя для консистентности
+            String safeSystemName = sanitize(systemName);
+            repository.deleteBySystemName(safeSystemName);
         }
     }
 

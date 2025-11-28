@@ -156,6 +156,13 @@ public class ConfigPageController {
         return dashCount >= 2 && systemName.endsWith("-mock");
     }
     
+    private String sanitize(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.replaceAll("[^a-zA-Z0-9-_]", "_");
+    }
+    
     private String extractSystemPrefix(String systemName) {
         // Берем первое слово до первого тире
         int firstDashIndex = systemName.indexOf('-');
@@ -186,7 +193,10 @@ public class ConfigPageController {
             }
             
             // Получаем все запланированные обновления и форматируем даты
-            List<ScheduledConfigUpdate> scheduledUpdates = scheduledConfigService.getScheduledUpdates(decodedName);
+            // Используем санитизированное имя для консистентности (как в ConfigService)
+            // ConfigService.findBySystemName использует sanitize внутри, поэтому используем то же имя
+            String sanitizedName = sanitize(decodedName);
+            List<ScheduledConfigUpdate> scheduledUpdates = scheduledConfigService.getScheduledUpdates(sanitizedName);
             Map<String, String> formattedScheduledTimes = new HashMap<>();
             for (ScheduledConfigUpdate update : scheduledUpdates) {
                 formattedScheduledTimes.put(update.getId(), update.getScheduledTime().format(DATE_TIME_FORMATTER));
