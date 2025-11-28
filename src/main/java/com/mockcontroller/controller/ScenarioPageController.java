@@ -148,7 +148,15 @@ public class ScenarioPageController {
                 LocalDateTime scheduledTime;
 
                 if (step.getScheduledTime() != null) {
-                    scheduledTime = LocalDateTime.ofInstant(step.getScheduledTime(), java.time.ZoneId.systemDefault());
+                    // Извлекаем относительное время из scheduledTime (HH:mm)
+                    // scheduledTime хранится как Instant, но содержит только время (часы и минуты)
+                    LocalDateTime stepTime = LocalDateTime.ofInstant(step.getScheduledTime(), java.time.ZoneId.systemDefault());
+                    int hours = stepTime.getHour();
+                    int minutes = stepTime.getMinute();
+                    int seconds = stepTime.getSecond();
+                    
+                    // Вычисляем абсолютное время относительно текущего момента
+                    scheduledTime = baseTime.plusHours(hours).plusMinutes(minutes).plusSeconds(seconds);
                 } else {
                     long delaySeconds = step.getDelayMs() / 1000;
                     scheduledTime = baseTime.plusSeconds(delaySeconds);
