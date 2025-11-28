@@ -334,7 +334,7 @@
     <div class="info">
         <p th:if="${group != null}"><strong>Группа:</strong> <span th:text="${group.name}">Group Name</span></p>
         <p th:if="${scenario.description}"><strong>Описание:</strong> <span th:text="${scenario.description}"></span></p>
-        <p><strong>Количество шагов:</strong> <span th:text="${#lists.size(scenario.steps)}">0</span></p>
+        <p><strong>Количество шагов:</strong> <span th:text="${#maps.size(stepsByTime)}">0</span></p>
     </div>
     
     <div class="timeline">
