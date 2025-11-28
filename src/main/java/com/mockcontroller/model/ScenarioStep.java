@@ -12,6 +12,7 @@ public class ScenarioStep {
     private long delayMs;
     private Instant scheduledTime;
     private Instant createdAt;
+    private String comment;
 
     public ScenarioStep() {
     }
@@ -88,6 +89,14 @@ public class ScenarioStep {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 }
 

@@ -502,7 +502,8 @@
             {
                 id: /*[[${step.id}]]*/ '',
                 templateId: /*[[${step.templateId != null ? step.templateId : ''}]]*/ '',
-                scheduledTime: /*[[${step.scheduledTime != null ? step.scheduledTime.toString() : 'null'}]]*/ 'null'
+                scheduledTime: /*[[${step.scheduledTime != null ? step.scheduledTime.toString() : 'null'}]]*/ 'null',
+                comment: /*[[${step.comment != null ? step.comment : 'null'}]]*/ 'null'
             }/*[# th:if="${!iterStat.last}"]*/,/*[/]*/
             /*[/]*/
         ],
@@ -602,10 +603,14 @@
             
             const key = day + '_' + timeKey;
             if (!stepsByTime[key]) {
-                stepsByTime[key] = { day: day, time: timeKey, templateIds: [] };
+                stepsByTime[key] = { day: day, time: timeKey, templateIds: [], comment: step.comment || '' };
             }
             if (step.templateId) {
                 stepsByTime[key].templateIds.push(step.templateId);
+            }
+            // Сохраняем комментарий из первого шага с таким временем
+            if (step.comment && !stepsByTime[key].comment) {
+                stepsByTime[key].comment = step.comment;
             }
         });
         
@@ -628,22 +633,22 @@
         if (!templatesSection) {
             setTimeout(() => {
                 sortedTimePoints.forEach((timePoint) => {
-                    addTimePointWithData(timePoint.day, timePoint.time, timePoint.templateIds);
+                    addTimePointWithData(timePoint.day, timePoint.time, timePoint.templateIds, timePoint.comment || '');
                 });
             }, 300);
             return;
         }
         
         sortedTimePoints.forEach((timePoint) => {
-            addTimePointWithData(timePoint.day, timePoint.time, timePoint.templateIds);
+            addTimePointWithData(timePoint.day, timePoint.time, timePoint.templateIds, timePoint.comment || '');
         });
     }
 
     function addTimePoint() {
-        addTimePointWithData(0, '00:00', []);
+        addTimePointWithData(0, '00:00', [], '');
     }
 
-    function addTimePointWithData(day, time, templateIds) {
+    function addTimePointWithData(day, time, templateIds, comment) {
         timePointCounter++;
         const container = document.getElementById('timePointsContainer');
         const timePointDiv = document.createElement('div');
@@ -683,6 +688,16 @@
                 <div id="timePoint_${timePointCounter}_templates">
                     ${availableTemplates}
                 </div>
+            </div>
+            <div style="margin-top: 12px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Комментарий (необязательно):</label>
+                <input type="text" 
+                       name="timePoint_${timePointCounter}_comment" 
+                       id="timePoint_${timePointCounter}_comment"
+                       placeholder="Комментарий для этой временной точки"
+                       maxlength="500"
+                       value="${comment || ''}"
+                       style="width: 100%; padding: 8px; border: 1px solid #d0d0d0; border-radius: 4px;"/>
             </div>
         `;
         
@@ -877,11 +892,16 @@
                 return;
             }
             
+            // Получаем комментарий для этой временной точки
+            const commentInput = timePoint.querySelector('input[id$="_comment"]');
+            const comment = commentInput ? commentInput.value.trim() : '';
+            
             templateCheckboxes.forEach(checkbox => {
                 timePoints.push({
                     day: dayValue,
                     time: timeValue,
-                    templateId: checkbox.value
+                    templateId: checkbox.value,
+                    comment: comment
                 });
             });
         });
@@ -926,7 +946,8 @@
             return {
                 templateId: tp.templateId,
                 delayMs: 0,
-                scheduledTime: scheduledTime
+                scheduledTime: scheduledTime,
+                comment: tp.comment || null
             };
         });
         

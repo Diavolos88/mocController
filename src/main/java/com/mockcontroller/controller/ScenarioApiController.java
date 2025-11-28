@@ -297,6 +297,7 @@ public class ScenarioApiController {
             ScenarioStep step = new ScenarioStep();
             step.setTemplateId(stepRequest.getTemplateId());
             step.setDelayMs(stepRequest.getDelayMs());
+            step.setComment(stepRequest.getComment());
 
             if (stepRequest.getScheduledTime() != null && !stepRequest.getScheduledTime().isEmpty()) {
                 try {

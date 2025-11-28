@@ -49,7 +49,7 @@ public class ScenarioMapper {
             return null;
         }
         
-        return new ScenarioStep(
+        ScenarioStep step = new ScenarioStep(
             entity.getId(),
             entity.getScenarioId(),
             entity.getTemplateId(),
@@ -58,6 +58,8 @@ public class ScenarioMapper {
             entity.getScheduledTime(),
             entity.getCreatedAt()
         );
+        step.setComment(entity.getComment());
+        return step;
     }
 
     public ScenarioStepEntity toEntity(ScenarioStep step) {
@@ -73,6 +75,7 @@ public class ScenarioMapper {
         entity.setDelayMs(step.getDelayMs());
         entity.setScheduledTime(step.getScheduledTime());
         entity.setCreatedAt(step.getCreatedAt());
+        entity.setComment(step.getComment());
         
         return entity;
     }

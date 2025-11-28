@@ -167,11 +167,17 @@ public class ScenarioPageController {
                     scheduledTime = LocalDateTime.now().plusSeconds(1);
                 }
 
+                // Используем комментарий из шага, если он есть, иначе создаем стандартный
+                String comment = step.getComment();
+                if (comment == null || comment.trim().isEmpty()) {
+                    comment = "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")";
+                }
+                
                 scheduledConfigService.scheduleUpdate(
                         step.getTemplate().getSystemName(),
                         step.getTemplate().getConfig(),
                         scheduledTime,
-                        "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")"
+                        comment
                 );
             }
 

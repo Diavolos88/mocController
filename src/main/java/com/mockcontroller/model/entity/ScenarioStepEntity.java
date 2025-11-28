@@ -30,6 +30,9 @@ public class ScenarioStepEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "comment", length = 500)
+    private String comment;
+
     public ScenarioStepEntity() {
         this.createdAt = Instant.now();
         this.delayMs = 0;
@@ -97,6 +100,14 @@ public class ScenarioStepEntity {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 }
 

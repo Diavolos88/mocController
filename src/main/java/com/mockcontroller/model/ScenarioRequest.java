@@ -47,6 +47,7 @@ public class ScenarioRequest {
         private String templateId;
         private long delayMs;
         private String scheduledTime; // Формат: "HH:mm:ss dd-MM-yyyy" или null
+        private String comment;
 
         public ScenarioStepRequest() {
         }
@@ -73,6 +74,14 @@ public class ScenarioRequest {
 
         public void setScheduledTime(String scheduledTime) {
             this.scheduledTime = scheduledTime;
+        }
+
+        public String getComment() {
+            return comment;
+        }
+
+        public void setComment(String comment) {
+            this.comment = comment;
         }
     }
 }
