@@ -446,13 +446,12 @@
 
         <div class="form-group system-select">
             <label for="groupSelect">Группа *</label>
-            <select id="groupSelect" name="group" required disabled>
+            <select id="groupSelect" name="group" required>
                 <option th:each="group : ${groups}" 
                         th:value="${group.id}" 
                         th:text="${group.name}"
                         th:selected="${scenario.groupId == group.id}">group</option>
             </select>
-            <p style="margin-top: 8px; color: #666; font-size: 13px;">Группу нельзя изменить после создания сценария</p>
         </div>
 
         <!-- Шаблоны для группы -->
@@ -529,6 +528,17 @@
             window.location.href = '/scenarios/' + scenarioId + '/edit';
         }
     }
+    
+    // Обработчик изменения группы - перезагружаем страницу для загрузки шаблонов новой группы
+    document.addEventListener('DOMContentLoaded', function() {
+        const groupSelect = document.getElementById('groupSelect');
+        if (groupSelect) {
+            groupSelect.addEventListener('change', function() {
+                const scenarioId = document.getElementById('scenarioId').value;
+                window.location.href = '/scenarios/' + scenarioId + '/edit';
+            });
+        }
+    });
 
     // Преобразуем scheduledTime (Instant) в день и время
     function parseScheduledTime(scheduledTimeStr) {
@@ -934,6 +944,7 @@
         const requestBody = {
             name: scenarioName,
             description: document.getElementById('scenarioDescription').value.trim() || null,
+            groupId: groupSelect.value,
             steps: steps
         };
         
@@ -964,6 +975,15 @@
 
     // Инициализация при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
+        // Обработчик изменения группы - перезагружаем страницу для загрузки шаблонов новой группы
+        const groupSelect = document.getElementById('groupSelect');
+        if (groupSelect) {
+            groupSelect.addEventListener('change', function() {
+                const scenarioId = document.getElementById('scenarioId').value;
+                window.location.href = '/scenarios/' + scenarioId + '/edit';
+            });
+        }
+        
         // Отмечаем все используемые шаблоны в основной секции
         if (scenarioData && scenarioData.usedTemplateIds && scenarioData.usedTemplateIds.length > 0) {
             setTimeout(() => {
