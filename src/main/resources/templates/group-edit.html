@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Создать группу</title>
+    <title>Редактировать группу</title>
     <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
     <script th:src="@{/js/theme.js}"></script>
     <style>
@@ -291,19 +291,19 @@
 
 <div class="container">
     <a href="/groups" class="back-link">← Назад к списку групп</a>
-    <h1>Создать группу</h1>
+    <h1>Редактировать группу</h1>
 
     <div th:if="${param.error}" class="error" th:text="${param.error[0]}"></div>
 
-    <form method="post" action="/groups">
+    <form th:action="@{/groups/{id}(id=${group.id})}" method="post">
         <div class="form-group">
             <label for="groupName">Название группы *</label>
-            <input type="text" id="groupName" name="name" required placeholder="Например: Auth системы" maxlength="255"/>
+            <input type="text" id="groupName" name="name" th:value="${group.name}" required placeholder="Например: Auth системы" maxlength="255"/>
         </div>
 
         <div class="form-group">
             <label for="groupDescription">Описание (необязательно)</label>
-            <textarea id="groupDescription" name="description" placeholder="Описание группы..."></textarea>
+            <textarea id="groupDescription" name="description" th:text="${group.description}" placeholder="Описание группы..."></textarea>
         </div>
 
         <div class="systems-section">
@@ -312,13 +312,14 @@
                 <input type="checkbox" 
                        th:id="'system_' + ${system}"
                        th:value="${system}"
+                       th:checked="${group.systemNames != null && group.systemNames.contains(system)}"
                        name="systemNames"/>
                 <label th:for="'system_' + ${system}" th:text="${system}">system</label>
             </div>
         </div>
 
         <div class="actions">
-            <button type="submit" class="btn btn-save">Создать группу</button>
+            <button type="submit" class="btn btn-save">Сохранить изменения</button>
         </div>
     </form>
 </div>

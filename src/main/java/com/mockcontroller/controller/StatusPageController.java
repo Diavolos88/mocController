@@ -1,6 +1,8 @@
 package com.mockcontroller.controller;
 
 import com.mockcontroller.model.Group;
+import com.mockcontroller.model.StoredConfig;
+import com.mockcontroller.service.ConfigService;
 import com.mockcontroller.service.GroupService;
 import com.mockcontroller.service.MockStatusService;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +22,7 @@ public class StatusPageController {
 
     private final MockStatusService mockStatusService;
     private final GroupService groupService;
+    private final ConfigService configService;
     
     @Value("${app.faq.url:}")
     private String faqUrl;
@@ -27,9 +30,10 @@ public class StatusPageController {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = 
         DateTimeFormatter.ofPattern("HH:mm:ss dd.MM.yyyy").withZone(ZoneId.systemDefault());
 
-    public StatusPageController(MockStatusService mockStatusService, GroupService groupService) {
+    public StatusPageController(MockStatusService mockStatusService, GroupService groupService, ConfigService configService) {
         this.mockStatusService = mockStatusService;
         this.groupService = groupService;
+        this.configService = configService;
     }
     
     private String getFaqUrl() {
@@ -37,11 +41,15 @@ public class StatusPageController {
     }
 
     @GetMapping("/status")
-    public String statusPage(Model model) {
+    public String statusPage(@org.springframework.web.bind.annotation.RequestParam(required = false) String groupId, Model model) {
         // Добавляем faqUrl из конфигурации
         model.addAttribute("faqUrl", getFaqUrl());
         Map<String, MockStatusService.SystemStatus> allStatuses = mockStatusService.getAllSystemStatuses();
         Collection<Group> groups = groupService.findAll();
+        model.addAttribute("currentGroup", groupId);
+        
+        // Получаем все зарегистрированные системы из конфигов
+        Set<String> allRegisteredSystems = getAllRegisteredSystems();
         
         // Создаем карту для быстрого поиска статусов по systemName
         Map<String, SystemStatusView> statusMap = new HashMap<>();
@@ -56,6 +64,22 @@ public class StatusPageController {
                 status.isAnyOnline()
             );
             statusMap.put(status.getSystemName(), view);
+        }
+        
+        // Добавляем системы с 0 подов (которые зарегистрированы, но не имеют инстансов)
+        for (String systemName : allRegisteredSystems) {
+            if (!statusMap.containsKey(systemName)) {
+                SystemStatusView view = new SystemStatusView(
+                    systemName,
+                    0,  // onlineCount
+                    0,  // offlineCount
+                    0,  // totalCount
+                    null,  // lastHealthcheckTime
+                    "Никогда",  // formattedTime
+                    false  // isAnyOnline
+                );
+                statusMap.put(systemName, view);
+            }
         }
         
         // Группируем статусы по группам
@@ -75,20 +99,35 @@ public class StatusPageController {
                     totalOnline += status.getOnlineCount();
                     totalOffline += status.getOfflineCount();
                     totalInstances += status.getTotalCount();
+                } else if (allRegisteredSystems.contains(systemName)) {
+                    // Система зарегистрирована, но не имеет инстансов (0 подов)
+                    SystemStatusView view = new SystemStatusView(
+                        systemName,
+                        0,  // onlineCount
+                        0,  // offlineCount
+                        0,  // totalCount
+                        null,  // lastHealthcheckTime
+                        "Никогда",  // formattedTime
+                        false  // isAnyOnline
+                    );
+                    groupSystems.add(view);
+                    // totalOnline, totalOffline, totalInstances остаются 0
                 }
             }
             
-            if (!groupSystems.isEmpty()) {
+            // Добавляем группу только если она содержит системы или если она выбрана
+            if (!groupSystems.isEmpty() || (groupId != null && group.getId().equals(groupId))) {
                 GroupStatusView groupView = new GroupStatusView(
-                    group.getId(),
-                    group.getName(),
-                    group.getDescription(),
-                    groupSystems,
-                    totalOnline,
-                    totalOffline,
-                    totalInstances
-                );
-                groupStatuses.add(groupView);
+                group.getId(),
+                group.getName(),
+                group.getDescription(),
+                groupSystems,
+                totalOnline,
+                totalOffline,
+                totalInstances,
+                urlEncode(group.getName())
+            );
+            groupStatuses.add(groupView);
             }
         }
         
@@ -119,12 +158,48 @@ public class StatusPageController {
                 ungroupedSystems,
                 ungroupedOnline,
                 ungroupedOffline,
-                ungroupedInstances
+                ungroupedInstances,
+                urlEncode("Без группы")
             );
             groupStatuses.add(ungroupedView);
         }
         
-        model.addAttribute("groupStatuses", groupStatuses);
+        // Если выбрана конкретная группа, фильтруем результаты
+        if (groupId != null && !groupId.trim().isEmpty() && !"all".equals(groupId)) {
+            List<GroupStatusView> filteredGroups = new ArrayList<>();
+            for (GroupStatusView groupView : groupStatuses) {
+                if (groupView.getGroupId() != null && groupView.getGroupId().equals(groupId)) {
+                    filteredGroups.add(groupView);
+                    break;
+                } else if (groupView.getGroupId() == null && "ungrouped".equals(groupId)) {
+                    filteredGroups.add(groupView);
+                    break;
+                }
+            }
+            model.addAttribute("groupStatuses", filteredGroups);
+        } else {
+            model.addAttribute("groupStatuses", groupStatuses);
+        }
+        
+        // Создаем список групп для табов
+        List<GroupTabInfo> groupTabs = new ArrayList<>();
+        // Добавляем таб "Все" для показа всех групп
+        groupTabs.add(new GroupTabInfo("all", "Все", groupId == null || groupId.isEmpty()));
+        
+        for (Group g : groups) {
+            boolean hasSystems = groupStatuses.stream().anyMatch(gs -> gs.getGroupId() != null && gs.getGroupId().equals(g.getId()));
+            if (hasSystems) {
+                boolean isActive = g.getId().equals(groupId);
+                groupTabs.add(new GroupTabInfo(g.getId(), g.getName(), isActive));
+            }
+        }
+        // Добавляем таб "Без группы" если есть такие системы
+        boolean hasUngrouped = groupStatuses.stream().anyMatch(gs -> gs.getGroupId() == null);
+        if (hasUngrouped) {
+            groupTabs.add(new GroupTabInfo("ungrouped", "Без группы", "ungrouped".equals(groupId)));
+        }
+        model.addAttribute("groupTabs", groupTabs);
+        
         return "status";
     }
 
@@ -153,6 +228,62 @@ public class StatusPageController {
             return "Никогда";
         }
         return DATE_TIME_FORMATTER.format(time);
+    }
+    
+    private String urlEncode(String value) {
+        if (value == null) {
+            return "";
+        }
+        try {
+            return java.net.URLEncoder.encode(value, "UTF-8");
+        } catch (java.io.UnsupportedEncodingException e) {
+            return value.replace(" ", "%20");
+        }
+    }
+    
+    /**
+     * Получает все зарегистрированные системы из конфигов.
+     * Извлекает префикс системы для заглушек в формате "system-name-emulation-mock".
+     */
+    private Set<String> getAllRegisteredSystems() {
+        Collection<StoredConfig> configs = configService.findAll();
+        Set<String> systems = new HashSet<>();
+        
+        for (StoredConfig config : configs) {
+            String systemName = config.getSystemName();
+            if (isValidTemplate(systemName)) {
+                String systemPrefix = extractSystemPrefix(systemName);
+                systems.add(systemPrefix);
+            } else {
+                systems.add(systemName);
+            }
+        }
+        
+        return systems;
+    }
+    
+    private boolean isValidTemplate(String systemName) {
+        if (systemName == null || systemName.isEmpty()) {
+            return false;
+        }
+        // Шаблон: название_системы-название_эмуляции-mock
+        // Должно быть минимум 2 тире и заканчиваться на -mock
+        int dashCount = 0;
+        for (char c : systemName.toCharArray()) {
+            if (c == '-') {
+                dashCount++;
+            }
+        }
+        return dashCount >= 2 && systemName.endsWith("-mock");
+    }
+    
+    private String extractSystemPrefix(String systemName) {
+        // Берем первое слово до первого тире
+        int firstDashIndex = systemName.indexOf('-');
+        if (firstDashIndex > 0) {
+            return systemName.substring(0, firstDashIndex);
+        }
+        return systemName;
     }
 
     public static class SystemStatusView {
@@ -217,10 +348,11 @@ public class StatusPageController {
         private final int totalOnline;
         private final int totalOffline;
         private final int totalInstances;
+        private final String encodedGroupName;
 
         public GroupStatusView(String groupId, String groupName, String groupDescription,
                               List<SystemStatusView> systems, int totalOnline, 
-                              int totalOffline, int totalInstances) {
+                              int totalOffline, int totalInstances, String encodedGroupName) {
             this.groupId = groupId;
             this.groupName = groupName;
             this.groupDescription = groupDescription;
@@ -228,6 +360,7 @@ public class StatusPageController {
             this.totalOnline = totalOnline;
             this.totalOffline = totalOffline;
             this.totalInstances = totalInstances;
+            this.encodedGroupName = encodedGroupName;
         }
 
         public String getGroupId() { return groupId; }
@@ -237,11 +370,28 @@ public class StatusPageController {
         public int getTotalOnline() { return totalOnline; }
         public int getTotalOffline() { return totalOffline; }
         public int getTotalInstances() { return totalInstances; }
+        public String getEncodedGroupName() { return encodedGroupName; }
         public int getActiveSystemsCount() {
             return (int) systems.stream()
                 .filter(SystemStatusView::isAnyOnline)
                 .count();
         }
+    }
+    
+    public static class GroupTabInfo {
+        private final String groupId;
+        private final String groupName;
+        private final boolean isActive;
+        
+        public GroupTabInfo(String groupId, String groupName, boolean isActive) {
+            this.groupId = groupId;
+            this.groupName = groupName;
+            this.isActive = isActive;
+        }
+        
+        public String getGroupId() { return groupId; }
+        public String getGroupName() { return groupName; }
+        public boolean isActive() { return isActive; }
     }
 }
 

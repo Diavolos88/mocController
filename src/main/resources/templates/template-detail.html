@@ -103,6 +103,19 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(29, 114, 184, 0.4);
         }
+        /* Переопределяем для специфичных классов, чтобы они не наследовали синий цвет */
+        .nav-link.status.active {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%) !important;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4) !important;
+        }
+        .nav-link.groups.active {
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%) !important;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4) !important;
+        }
+        .nav-link.faq.active {
+            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%) !important;
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4) !important;
+        }
         .nav-link.mocks.active {
             background: linear-gradient(135deg, #155a94 0%, #0f4a7a 100%);
             box-shadow: 0 4px 12px rgba(29, 114, 184, 0.4);

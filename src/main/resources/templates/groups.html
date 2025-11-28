@@ -135,6 +135,37 @@
             background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
             box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
         }
+        .nav-link.status {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+        }
+        .nav-link.status:hover {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        .nav-link.faq {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(244, 67, 54, 0.2);
+        }
+        .nav-link.faq:hover {
+            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+        /* Переопределяем для специфичных классов, чтобы они не наследовали синий цвет */
+        .nav-link.status.active {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%) !important;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4) !important;
+        }
+        .nav-link.groups.active {
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%) !important;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4) !important;
+        }
+        .nav-link.faq.active {
+            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%) !important;
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4) !important;
+        }
         .card {
             border: 1px solid #e0e0e0;
             border-radius: 6px;
@@ -143,10 +174,20 @@
             background: #fafafa;
             position: relative;
         }
+        .card-edit-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            background: #1d72b8;
+            color: white;
+            transition: all 0.2s;
+        }
+        .card-edit-btn:hover {
+            background: #155a94;
+        }
         .card-delete-btn {
-            position: absolute;
-            top: 12px;
-            right: 12px;
             padding: 6px 12px;
             border: none;
             border-radius: 4px;
@@ -211,6 +252,55 @@
             border-radius: 4px;
             font-size: 12px;
         }
+        
+        /* Темная тема для страницы групп */
+        body.dark-theme {
+            background-color: #1a1a1a;
+        }
+        body.dark-theme .container {
+            background: #2d2d2d;
+            border-color: #404040;
+        }
+        body.dark-theme h1 {
+            color: #d0d0d0;
+        }
+        body.dark-theme .card {
+            background: #252525;
+            border-color: #404040;
+        }
+        body.dark-theme .card h2 {
+            color: #d0d0d0;
+        }
+        body.dark-theme .card p {
+            color: #b0b0b0;
+        }
+        body.dark-theme .card p strong {
+            color: #c0c0c0;
+        }
+        body.dark-theme .system-list {
+            background: #1a1a1a;
+            border: 1px solid #404040;
+        }
+        body.dark-theme .system-tag {
+            background: #1976D2;
+            color: #e0e0e0;
+            border: 1px solid #2196F3;
+        }
+        body.dark-theme .empty {
+            color: #999;
+        }
+        body.dark-theme .card-edit-btn {
+            background: #1976D2;
+        }
+        body.dark-theme .card-edit-btn:hover {
+            background: #1565C0;
+        }
+        body.dark-theme .card-delete-btn {
+            background: #d32f2f;
+        }
+        body.dark-theme .card-delete-btn:hover {
+            background: #c62828;
+        }
     </style>
 </head>
 <body>
@@ -249,10 +339,13 @@
     </div>
 
     <div th:each="group : ${groups}" class="card">
-        <form th:action="@{/groups/{id}/delete(id=${group.id})}" method="post" style="margin: 0; position: absolute; top: 12px; right: 12px;" 
-              th:onsubmit="return confirm('Вы уверены, что хотите удалить эту группу?');">
-            <button type="submit" class="card-delete-btn">Удалить</button>
-        </form>
+        <div style="position: absolute; top: 12px; right: 12px; display: flex; gap: 8px;">
+            <a th:href="@{/groups/{id}/edit(id=${group.id})}" class="card-edit-btn" style="text-decoration: none;">Редактировать</a>
+            <form th:action="@{/groups/{id}/delete(id=${group.id})}" method="post" style="margin: 0;" 
+                  th:onsubmit="return confirm('Вы уверены, что хотите удалить эту группу?');">
+                <button type="submit" class="card-delete-btn">Удалить</button>
+            </form>
+        </div>
         <h2 th:text="${group.name}">Group Name</h2>
         <p th:if="${group.description}" th:text="${group.description}">Description</p>
         <p><strong>Систем в группе:</strong> <span th:text="${#lists.size(group.systemNames)}">0</span></p>

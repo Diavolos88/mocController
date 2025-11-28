@@ -39,6 +39,10 @@ public class GroupService {
         return repository.findById(id).map(mapper::toModel);
     }
 
+    public Optional<Group> findByName(String name) {
+        return repository.findByNameIgnoreCase(name).map(mapper::toModel);
+    }
+
     @Transactional
     public Group createGroup(String name, String description, List<String> systemNames) {
         GroupEntity entity = new GroupEntity();
@@ -96,6 +100,14 @@ public class GroupService {
         return systemRepository.findByGroup_Id(groupId).stream()
                 .map(GroupSystemEntity::getSystemName)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void removeSystemFromGroup(String groupId, String systemName) {
+        if (!repository.existsById(groupId)) {
+            throw new IllegalArgumentException("Group not found: " + groupId);
+        }
+        systemRepository.deleteByGroupIdAndSystemName(groupId, systemName);
     }
 }
 

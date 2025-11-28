@@ -53,6 +53,59 @@ OK
 
 ---
 
+### Проверка healthcheck группы
+
+```bash
+GET /api/groups/healthcheck?groupName={groupName}
+```
+
+**cURL:**
+```bash
+curl -X GET "http://localhost:8080/api/groups/healthcheck?groupName=Auth%20системы"
+```
+
+**PowerShell:**
+```powershell
+$groupName = "Auth системы"
+$uri = "http://localhost:8080/api/groups/healthcheck?groupName=$([System.Web.HttpUtility]::UrlEncode($groupName))"
+Invoke-RestMethod -Uri $uri -Method Get
+```
+
+**Ответы:**
+
+**200 OK (все системы онлайн):**
+```json
+{
+  "status": "OK",
+  "message": "Все заглушки запущены",
+  "groupName": "Auth системы"
+}
+```
+
+**201 Created (не все системы онлайн):**
+- `200 OK` - все системы в группе имеют хотя бы одну онлайн под
+- `201 Created` - не все системы имеют онлайн поды (возвращается детальная статистика)
+
+**Пример ответа (201):**
+```json
+{
+  "status": "NOT_ALL_HEALTHY",
+  "message": "Не все системы в группе имеют онлайн поды",
+  "groupName": "Auth системы",
+  "systems": [
+    {
+      "systemName": "auth",
+      "hasOnlinePods": true,
+      "onlineCount": 2,
+      "offlineCount": 1,
+      "totalCount": 3
+    }
+  ]
+}
+```
+
+---
+
 ### Проверка обновлений
 
 ```bash
@@ -241,6 +294,10 @@ curl -X DELETE http://localhost:8080/api/configs/scheduled/550e8400-e29b-41d4-a7
 
 - **Главная:** `http://localhost:8080`
 - **Конфиг:** `http://localhost:8080/configs/{systemName}`
+- **Группы:** `http://localhost:8080/groups`
+- **Создать группу:** `http://localhost:8080/groups/new`
+- **Редактировать группу:** `http://localhost:8080/groups/{id}/edit`
+- **Статусы:** `http://localhost:8080/status`
 
 ---
 

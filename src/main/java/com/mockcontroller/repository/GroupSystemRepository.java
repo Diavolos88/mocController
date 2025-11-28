@@ -10,5 +10,6 @@ import java.util.List;
 public interface GroupSystemRepository extends JpaRepository<GroupSystemEntity, String> {
     List<GroupSystemEntity> findByGroup_Id(String groupId);
     void deleteByGroupId(String groupId);
+    void deleteByGroupIdAndSystemName(String groupId, String systemName);
 }
 
