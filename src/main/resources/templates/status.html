@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Статусы заглушек</title>
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
+    <script th:src="@{/js/theme.js}"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+            margin: 0;
+            padding: 40px 20px;
+            padding-top: 120px;
+            background-color: #f5f5f5;
+        }
+        .fixed-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 16px 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .fixed-nav .nav-links {
+            display: flex;
+            gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .nav-links-main {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex: 1;
+            justify-content: center;
+        }
+        .nav-links-right {
+            position: absolute;
+            right: 0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .nav-link.secondary {
+            padding: 8px 16px;
+            font-size: 13px;
+            min-width: auto;
+        }
+        .nav-link {
+            padding: 14px 28px;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            /* Базовый цвет по умолчанию - если класс не указан */
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+        }
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .nav-link.mocks {
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+        }
+        .nav-link.status {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+        }
+        .nav-link.status.active {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+        }
+        .nav-link.template {
+            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+            color: white;
+        }
+        .nav-link.scenario {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+        }
+        .nav-link.active {
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+        }
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid #d0d0d0;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+        body.dark-theme {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        body.dark-theme .fixed-nav {
+            background: #2d2d2d;
+            border-bottom-color: #404040;
+        }
+        body.dark-theme .container {
+            background: #2d2d2d;
+            border-color: #404040;
+        }
+        body.dark-theme .status-card {
+            background: #252525;
+            border-color: #404040;
+        }
+        body.dark-theme .theme-toggle {
+            background: #2d2d2d;
+            border-color: #555;
+            color: #ffd700;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 32px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        h1 {
+            margin: 0 0 24px 0;
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+        }
+        .status-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .status-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px 20px;
+            background: #fafafa;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .status-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .status-card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 200px;
+            flex: 0 0 auto;
+        }
+        .system-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1d72b8;
+            text-decoration: none;
+        }
+        .system-name:hover {
+            text-decoration: underline;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .status-online {
+            background: #4caf50;
+            color: white;
+        }
+        .status-offline {
+            background: #f44336;
+            color: white;
+        }
+        .status-mixed {
+            background: #ff9800;
+            color: white;
+        }
+        .status-info {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            flex: 1;
+            flex-wrap: wrap;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+        .info-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        .last-check {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            min-width: 180px;
+            flex: 0 0 auto;
+        }
+        .last-check-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .last-check-value {
+            font-size: 13px;
+            color: #333;
+            white-space: nowrap;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(29, 114, 184, 0.3);
+            transition: all 0.3s;
+        }
+        .refresh-btn:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 6px 16px rgba(29, 114, 184, 0.4);
+        }
+        .group-section {
+            margin-bottom: 40px;
+        }
+        .group-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .group-title-section {
+            flex: 1;
+            min-width: 200px;
+        }
+        .group-name {
+            margin: 0 0 8px 0;
+            font-size: 22px;
+            font-weight: 600;
+            color: #1d72b8;
+        }
+        .group-description {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .group-stats {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .group-stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 100px;
+        }
+        .group-stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .group-stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+        body.dark-theme .group-header {
+            background: linear-gradient(135deg, #2d2d2d 0%, #252525 100%);
+            border-color: #404040;
+        }
+        body.dark-theme .group-name {
+            color: #64b5f6;
+        }
+        body.dark-theme .group-description {
+            color: #999;
+        }
+        body.dark-theme .group-stat-label {
+            color: #999;
+        }
+        body.dark-theme .group-stat-value {
+            color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+<div class="fixed-nav">
+    <div class="nav-links">
+        <div class="nav-links-main">
+            <a href="/" class="nav-link mocks">Заглушки</a>
+            <a href="/templates" class="nav-link template">Шаблоны</a>
+            <a href="/scenarios" class="nav-link scenario">Сценарии</a>
+        </div>
+        <div class="nav-links-right">
+            <a href="/groups" class="nav-link groups secondary">Группы</a>
+            <a href="/status" class="nav-link status secondary active">Статусы</a>
+            <a th:if="${faqUrl != null && !faqUrl.isEmpty()}" th:href="${faqUrl}" target="_blank" class="nav-link faq secondary">FAQ</a>
+            <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <h1>Статусы заглушек</h1>
+    
+    <div th:if="${groupStatuses != null && !groupStatuses.isEmpty()}">
+        <div th:each="group : ${groupStatuses}" class="group-section">
+            <div class="group-header">
+                <div class="group-title-section">
+                    <h2 class="group-name" th:text="${group.groupName}">Название группы</h2>
+                    <p class="group-description" th:if="${group.groupDescription != null && !group.groupDescription.isEmpty()}" 
+                       th:text="${group.groupDescription}">Описание группы</p>
+                </div>
+                <div class="group-stats">
+                    <div class="group-stat-item">
+                        <span class="group-stat-label">Активных заглушек:</span>
+                        <span class="group-stat-value" style="color: #4caf50;" th:text="${group.activeSystemsCount}">0</span>
+                    </div>
+                    <div class="group-stat-item">
+                        <span class="group-stat-label">Всего под:</span>
+                        <span class="group-stat-value" th:text="${group.totalInstances}">0</span>
+                    </div>
+                    <div class="group-stat-item">
+                        <span class="group-stat-label">Онлайн:</span>
+                        <span class="group-stat-value" style="color: #4caf50;" th:text="${group.totalOnline}">0</span>
+                    </div>
+                    <div class="group-stat-item">
+                        <span class="group-stat-label">Офлайн:</span>
+                        <span class="group-stat-value" style="color: #f44336;" th:text="${group.totalOffline}">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-grid">
+                <div th:each="status : ${group.systems}" class="status-card">
+                    <div class="status-card-header">
+                        <a th:href="@{'/status/' + ${status.systemName}}" class="system-name" th:text="${status.systemName}">System Name</a>
+                        <span th:if="${status.onlineCount > 0 && status.offlineCount == 0}" 
+                              class="status-badge status-online">Online</span>
+                        <span th:if="${status.onlineCount == 0 && status.offlineCount > 0}" 
+                              class="status-badge status-offline">Offline</span>
+                        <span th:if="${status.onlineCount > 0 && status.offlineCount > 0}" 
+                              class="status-badge status-mixed">Mixed</span>
+                    </div>
+                    
+                    <div class="status-info">
+                        <div class="info-item">
+                            <span class="info-label">Онлайн</span>
+                            <span class="info-value" style="color: #4caf50;" th:text="${status.onlineCount}">0</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Офлайн</span>
+                            <span class="info-value" style="color: #f44336;" th:text="${status.offlineCount}">0</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Всего</span>
+                            <span class="info-value" th:text="${status.totalCount}">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="last-check">
+                        <div class="last-check-label">Последний healthcheck</div>
+                        <div class="last-check-value" th:text="${status.formattedTime}">Никогда</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div th:if="${groupStatuses == null || groupStatuses.isEmpty()}" class="empty-state">
+        <p>Нет зарегистрированных заглушек</p>
+        <p style="font-size: 14px; margin-top: 8px;">Заглушки автоматически регистрируются при отправке healthcheck</p>
+    </div>
+</div>
+
+<button class="refresh-btn" onclick="location.reload()" title="Обновить">🔄</button>
+
+<script>
+    // Автообновление каждые 30 секунд
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+</script>
+</body>
+</html>
+

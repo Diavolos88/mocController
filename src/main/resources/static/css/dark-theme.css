@@ -304,3 +304,55 @@ body.dark-theme .api-example h3 {
     color: #e0e0e0;
 }
 
+/* Стили для страницы статусов */
+body.dark-theme .status-card {
+    background: #252525;
+    border-color: #404040;
+}
+
+body.dark-theme .status-card-header {
+    border-bottom-color: #404040;
+}
+
+body.dark-theme .system-name {
+    color: #64b5f6;
+}
+
+body.dark-theme .info-label {
+    color: #999;
+}
+
+body.dark-theme .info-value {
+    color: #e0e0e0;
+}
+
+body.dark-theme .last-check {
+    border-top-color: #404040;
+}
+
+body.dark-theme .last-check-label {
+    color: #999;
+}
+
+body.dark-theme .last-check-value {
+    color: #e0e0e0;
+}
+
+body.dark-theme .instance-row {
+    background: #252525;
+    border-color: #404040;
+}
+
+body.dark-theme .instance-row:hover {
+    background: #2d2d2d;
+}
+
+body.dark-theme .instance-id {
+    color: #999;
+}
+
+body.dark-theme .status-card {
+    background: #252525;
+    border-color: #404040;
+}
+

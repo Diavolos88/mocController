@@ -38,13 +38,20 @@
             display: flex;
             gap: 16px;
             align-items: center;
+            flex: 1;
+            justify-content: center;
         }
         .nav-links-right {
             position: absolute;
             right: 0;
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
+        }
+        .nav-link.secondary {
+            padding: 8px 16px;
+            font-size: 13px;
+            min-width: auto;
         }
         
         /* Кнопка переключения темы */
@@ -226,7 +233,6 @@
             text-decoration: none;
             border: none;
             border-radius: 8px;
-            color: #333;
             font-size: 16px;
             font-weight: 600;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -237,6 +243,9 @@
             min-width: 140px;
             text-align: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            /* Базовый цвет по умолчанию - если класс не указан */
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
         }
         .nav-link:hover {
             transform: translateY(-2px);
@@ -281,6 +290,19 @@
         .nav-link.scenario:hover {
             background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
             box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+        }
+        .nav-link.groups {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+        }
+        .nav-link.groups:hover {
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+        .nav-link.groups.active {
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
         }
         .main-wrapper {
             display: flex;
@@ -865,7 +887,9 @@
             <a href="/scenarios" class="nav-link scenario">Сценарии</a>
         </div>
         <div class="nav-links-right">
-            <a th:if="${faqUrl != null && !faqUrl.isEmpty()}" th:href="${faqUrl}" target="_blank" class="nav-link faq">FAQ</a>
+            <a href="/groups" class="nav-link groups secondary">Группы</a>
+            <a href="/status" class="nav-link status secondary">Статусы</a>
+            <a th:if="${faqUrl != null && !faqUrl.isEmpty()}" th:href="${faqUrl}" target="_blank" class="nav-link faq secondary">FAQ</a>
             <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
         </div>
     </div>

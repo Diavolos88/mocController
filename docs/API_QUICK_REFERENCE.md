@@ -2,6 +2,57 @@
 
 ## REST API
 
+### Healthcheck сервиса
+
+```bash
+GET /service/healthcheck
+```
+
+**cURL:**
+```bash
+curl -X GET http://localhost:8080/service/healthcheck
+```
+
+**PowerShell:**
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8080/service/healthcheck" -Method Get
+```
+
+**Ответ:**
+```
+OK
+```
+
+---
+
+### Healthcheck от заглушек
+
+```bash
+POST /api/healthcheck?systemName={systemName}&instanceId={instanceId}
+```
+
+**cURL:**
+```bash
+curl -X POST "http://localhost:8080/api/healthcheck?systemName=auth-mock&instanceId=instance-1"
+```
+
+**PowerShell:**
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8080/api/healthcheck?systemName=auth-mock&instanceId=instance-1" -Method Post
+```
+
+**Ответ:**
+```
+OK
+```
+
+**Примечания:**
+- Заглушки должны отправлять healthcheck каждые 1-2 минуты
+- Заглушка считается онлайн, если последний healthcheck был менее 5 минут назад
+- Параметр `instanceId` необязателен (по умолчанию "default")
+
+---
+
 ### Проверка обновлений
 
 ```bash
@@ -388,6 +439,8 @@ curl -X DELETE http://localhost:8080/api/groups/550e8400-e29b-41d4-a716-44665544
 - **Шаблоны:** `http://localhost:8080/templates`
 - **Сценарии:** `http://localhost:8080/scenarios`
 - **Группы:** `http://localhost:8080/groups`
+- **Статусы:** `http://localhost:8080/status` - страница статусов заглушек с группировкой по группам
+- **Статус системы:** `http://localhost:8080/status/{systemName}` - детальная информация по инстансам системы
 
 ---
 
