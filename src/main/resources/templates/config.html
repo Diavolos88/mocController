@@ -1838,12 +1838,6 @@
             // Показываем уведомление
             const templateName = button.closest('.template-card').querySelector('.template-name').textContent;
             showNotification('Шаблон "' + templateName + '" применен. Проверьте изменения и сохраните при необходимости.', 'info');
-            
-            // Прокручиваем к началу формы
-            const configForm = document.getElementById('configForm');
-            if (configForm) {
-                configForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
         } catch (error) {
             alert('Ошибка при применении шаблона: ' + error.message);
         }
