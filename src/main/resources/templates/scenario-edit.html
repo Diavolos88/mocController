@@ -603,13 +603,14 @@
             
             const key = day + '_' + timeKey;
             if (!stepsByTime[key]) {
-                stepsByTime[key] = { day: day, time: timeKey, templateIds: [], comment: step.comment || '' };
+                const commentValue = (step.comment && step.comment !== 'null' && step.comment !== null) ? step.comment : '';
+                stepsByTime[key] = { day: day, time: timeKey, templateIds: [], comment: commentValue };
             }
             if (step.templateId) {
                 stepsByTime[key].templateIds.push(step.templateId);
             }
-            // Сохраняем комментарий из первого шага с таким временем
-            if (step.comment && !stepsByTime[key].comment) {
+            // Сохраняем комментарий из первого шага с таким временем (если еще не установлен)
+            if (step.comment && step.comment !== 'null' && step.comment !== null && !stepsByTime[key].comment) {
                 stepsByTime[key].comment = step.comment;
             }
         });
