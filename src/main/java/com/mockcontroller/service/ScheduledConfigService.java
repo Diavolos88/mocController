@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mockcontroller.model.ScheduledConfigUpdate;
 import com.mockcontroller.model.entity.ScheduledConfigUpdateEntity;
 import com.mockcontroller.repository.ScheduledConfigUpdateRepository;
+import com.mockcontroller.util.DateTimeUtils;
+import com.mockcontroller.util.SystemNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -12,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,7 +21,6 @@ import java.util.stream.Collectors;
 public class ScheduledConfigService {
 
     private static final Logger logger = LoggerFactory.getLogger(ScheduledConfigService.class);
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss dd-MM-yyyy");
     
     private final ObjectMapper objectMapper;
     private final ConfigService configService;
@@ -42,8 +42,14 @@ public class ScheduledConfigService {
 
     @Transactional
     public ScheduledConfigUpdate scheduleUpdate(String systemName, JsonNode newConfig, LocalDateTime scheduledTime, String comment) {
+        if (newConfig == null) {
+            throw new IllegalArgumentException("newConfig cannot be null");
+        }
+        if (scheduledTime == null) {
+            throw new IllegalArgumentException("scheduledTime cannot be null");
+        }
         // Используем санитизированное имя для консистентности с ConfigService
-        String safeSystemName = sanitize(systemName != null ? systemName : "");
+        String safeSystemName = SystemNameUtils.sanitize(systemName != null ? systemName : "");
         ScheduledConfigUpdateEntity entity = new ScheduledConfigUpdateEntity(
             safeSystemName, 
             jsonToString(newConfig), 
@@ -53,19 +59,12 @@ public class ScheduledConfigService {
         return mapper.toModel(entity);
     }
     
-    private String sanitize(String name) {
-        if (name == null) {
-            return "";
-        }
-        return name.replaceAll("[^a-zA-Z0-9-_]", "_");
-    }
-
     public boolean hasScheduledUpdate(String systemName) {
         if (systemName == null || systemName.trim().isEmpty()) {
             return false;
         }
         // Используем санитизированное имя для консистентности
-        String safeSystemName = sanitize(systemName);
+        String safeSystemName = SystemNameUtils.sanitize(systemName);
         return repository.existsBySystemName(safeSystemName);
     }
 
@@ -74,11 +73,11 @@ public class ScheduledConfigService {
             return List.of();
         }
         // Используем санитизированное имя для консистентности
-        String safeSystemName = sanitize(systemName);
+        String safeSystemName = SystemNameUtils.sanitize(systemName);
         LocalDateTime now = LocalDateTime.now();
         // Возвращаем только будущие обновления (которые еще не наступили)
         return repository.findBySystemNameOrderByScheduledTimeAsc(safeSystemName).stream()
-                .filter(entity -> entity.getScheduledTime().isAfter(now))
+                .filter(entity -> entity.getScheduledTime() != null && entity.getScheduledTime().isAfter(now))
                 .map(mapper::toModel)
                 .collect(Collectors.toList());
     }
@@ -106,9 +105,17 @@ public class ScheduledConfigService {
             ScheduledConfigUpdate update = mapper.toModel(entity);
             try {
                 String systemName = update.getSystemName() != null ? update.getSystemName() : "unknown";
+                JsonNode newConfig = update.getNewConfig();
+                
+                if (newConfig == null) {
+                    logger.warn("Skipping scheduled update {} for {}: newConfig is null", 
+                        update.getId(), systemName);
+                    continue;
+                }
+                
                 logger.info("Applying scheduled update for {} at {} (scheduled: {})", 
                     systemName, now, entity.getScheduledTime());
-                configService.updateCurrentConfig(systemName, update.getNewConfig());
+                configService.updateCurrentConfig(systemName, newConfig);
                 if (update.getId() != null) {
                     logger.info("Deleting scheduled update {} after successful application", update.getId());
                     repository.deleteById(update.getId());
@@ -126,7 +133,7 @@ public class ScheduledConfigService {
     public void deleteAllBySystemName(String systemName) {
         if (systemName != null && !systemName.trim().isEmpty()) {
             // Используем санитизированное имя для консистентности
-            String safeSystemName = sanitize(systemName);
+            String safeSystemName = SystemNameUtils.sanitize(systemName);
             repository.deleteBySystemName(safeSystemName);
         }
     }
@@ -142,8 +149,8 @@ public class ScheduledConfigService {
         }
     }
 
-    public static DateTimeFormatter getDateTimeFormatter() {
-        return DATE_TIME_FORMATTER;
+    public static java.time.format.DateTimeFormatter getDateTimeFormatter() {
+        return DateTimeUtils.DATE_TIME_FORMATTER;
     }
 }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.mockcontroller.model.Template;
 import com.mockcontroller.service.ConfigService;
 import com.mockcontroller.service.TemplateService;
+import com.mockcontroller.util.SystemNameUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,8 +39,8 @@ public class TemplatePageController {
         for (Template template : allTemplates) {
             String systemName = template.getSystemName();
             // Проверяем шаблон: название_системы-название_эмуляции-mock
-            if (isValidTemplate(systemName)) {
-                String systemPrefix = extractSystemPrefix(systemName);
+            if (SystemNameUtils.isValidTemplate(systemName)) {
+                String systemPrefix = SystemNameUtils.extractSystemPrefix(systemName);
                 String mockName = systemName; // Полное имя заглушки для второго уровня
                 
                 groupedBySystemAndMock
@@ -162,29 +163,6 @@ public class TemplatePageController {
         return "templates";
     }
     
-    private boolean isValidTemplate(String systemName) {
-        if (systemName == null || systemName.isEmpty()) {
-            return false;
-        }
-        // Шаблон: название_системы-название_эмуляции-mock
-        // Должно быть минимум 2 тире и заканчиваться на -mock
-        int dashCount = 0;
-        for (char c : systemName.toCharArray()) {
-            if (c == '-') {
-                dashCount++;
-            }
-        }
-        return dashCount >= 2 && systemName.endsWith("-mock");
-    }
-    
-    private String extractSystemPrefix(String systemName) {
-        // Берем первое слово до первого тире
-        int firstDashIndex = systemName.indexOf('-');
-        if (firstDashIndex > 0) {
-            return systemName.substring(0, firstDashIndex);
-        }
-        return systemName;
-    }
     
     public static class SystemInfo {
         private final String name;

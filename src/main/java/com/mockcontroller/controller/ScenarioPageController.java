@@ -8,6 +8,8 @@ import com.mockcontroller.service.GroupService;
 import com.mockcontroller.service.ScenarioService;
 import com.mockcontroller.service.ScheduledConfigService;
 import com.mockcontroller.service.TemplateService;
+import com.mockcontroller.util.DateTimeUtils;
+import com.mockcontroller.util.SystemNameUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Controller
@@ -62,7 +63,7 @@ public class ScenarioPageController {
                         step.getScheduledTime(), 
                         java.time.ZoneId.systemDefault()
                     );
-                    timeKey = localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+                    timeKey = localDateTime.format(DateTimeUtils.TIME_FORMATTER);
                 } else {
                     long delayMs = step.getDelayMs();
                     long hours = delayMs / (1000 * 60 * 60);
@@ -137,7 +138,7 @@ public class ScenarioPageController {
                         step.getScheduledTime(), 
                         java.time.ZoneId.systemDefault()
                     );
-                    timeKey = localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+                    timeKey = localDateTime.format(DateTimeUtils.TIME_FORMATTER);
                 } else {
                     // Используем delayMs для вычисления времени
                     long delayMs = step.getDelayMs();
@@ -222,7 +223,7 @@ public class ScenarioPageController {
             // Парсим время начала сценария
             LocalDateTime startTime;
             try {
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss dd-MM-yyyy");
+                java.time.format.DateTimeFormatter formatter = DateTimeUtils.DATE_TIME_FORMATTER;
                 startTime = LocalDateTime.parse(scheduledDateTime, formatter);
             } catch (Exception e) {
                 return "redirect:/scenarios?error=" +
@@ -315,8 +316,8 @@ public class ScenarioPageController {
             // Извлекаем уникальные префиксы систем из группы (для шаблонов system-integration-mock)
             Set<String> groupSystemPrefixes = new HashSet<>();
             for (String groupSystem : groupSystems) {
-                if (isValidTemplate(groupSystem)) {
-                    String systemPrefix = extractSystemPrefix(groupSystem);
+                if (SystemNameUtils.isValidTemplate(groupSystem)) {
+                    String systemPrefix = SystemNameUtils.extractSystemPrefix(groupSystem);
                     groupSystemPrefixes.add(systemPrefix);
                 } else {
                     // Если не соответствует шаблону, используем полное имя
@@ -330,8 +331,8 @@ public class ScenarioPageController {
                 boolean belongsToGroup = false;
                 String templatePrefix = null;
                 
-                if (isValidTemplate(systemName)) {
-                    templatePrefix = extractSystemPrefix(systemName);
+                if (SystemNameUtils.isValidTemplate(systemName)) {
+                    templatePrefix = SystemNameUtils.extractSystemPrefix(systemName);
                     // Сравниваем префикс шаблона с префиксами систем из группы
                     if (groupSystemPrefixes.contains(templatePrefix)) {
                         belongsToGroup = true;
@@ -381,26 +382,6 @@ public class ScenarioPageController {
         }
     }
 
-    private boolean isValidTemplate(String systemName) {
-        if (systemName == null || systemName.isEmpty()) {
-            return false;
-        }
-        int dashCount = 0;
-        for (char c : systemName.toCharArray()) {
-            if (c == '-') {
-                dashCount++;
-            }
-        }
-        return dashCount >= 2 && systemName.endsWith("-mock");
-    }
-    
-    private String extractSystemPrefix(String systemName) {
-        int firstDashIndex = systemName.indexOf('-');
-        if (firstDashIndex > 0) {
-            return systemName.substring(0, firstDashIndex);
-        }
-        return systemName;
-    }
 
     public static class MockWithTemplates {
         private final String mockName;

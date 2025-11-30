@@ -4,6 +4,7 @@ import com.mockcontroller.model.Template;
 import com.mockcontroller.model.TemplateRequest;
 import com.mockcontroller.service.ConfigService;
 import com.mockcontroller.service.TemplateService;
+import com.mockcontroller.util.SystemNameUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -48,8 +49,8 @@ public class TemplateApiController {
                         String templateSystem = template.getSystemName();
                         if (templateSystem == null) return false;
                         // Проверяем, соответствует ли шаблон системе
-                        if (isValidTemplate(templateSystem)) {
-                            String systemPrefix = extractSystemPrefix(templateSystem);
+                        if (SystemNameUtils.isValidTemplate(templateSystem)) {
+                            String systemPrefix = SystemNameUtils.extractSystemPrefix(templateSystem);
                             return systemPrefix.equals(system);
                         } else {
                             return templateSystem.equals(system);
@@ -62,26 +63,6 @@ public class TemplateApiController {
         }
     }
 
-    private boolean isValidTemplate(String systemName) {
-        if (systemName == null || systemName.isEmpty()) {
-            return false;
-        }
-        int dashCount = 0;
-        for (char c : systemName.toCharArray()) {
-            if (c == '-') {
-                dashCount++;
-            }
-        }
-        return dashCount >= 2 && systemName.endsWith("-mock");
-    }
-
-    private String extractSystemPrefix(String systemName) {
-        int firstDashIndex = systemName.indexOf('-');
-        if (firstDashIndex > 0) {
-            return systemName.substring(0, firstDashIndex);
-        }
-        return systemName;
-    }
 
     @GetMapping("/{id}")
     public ResponseEntity<Template> getTemplate(@PathVariable String id) {

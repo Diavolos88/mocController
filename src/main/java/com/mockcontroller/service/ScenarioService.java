@@ -69,9 +69,11 @@ public class ScenarioService {
                 .map(stepEntity -> {
                     ScenarioStep step = mapper.toModel(stepEntity);
                     // Загружаем шаблон для шага
-                    templateRepository.findById(step.getTemplateId())
-                            .map(templateMapper::toModel)
-                            .ifPresent(step::setTemplate);
+                    if (step.getTemplateId() != null && !step.getTemplateId().trim().isEmpty()) {
+                        templateRepository.findById(step.getTemplateId())
+                                .map(templateMapper::toModel)
+                                .ifPresent(step::setTemplate);
+                    }
                     return step;
                 })
                 .collect(Collectors.toList());

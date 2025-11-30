@@ -15,6 +15,7 @@ import com.mockcontroller.model.ConfigSyncResponse.SyncStatus;
 import com.mockcontroller.model.StoredConfig;
 import com.mockcontroller.model.entity.StoredConfigEntity;
 import com.mockcontroller.repository.StoredConfigRepository;
+import com.mockcontroller.util.SystemNameUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,15 +46,15 @@ public class ConfigService {
                 .map(mapper::toModel)
                 .filter(config -> config.getSystemName() != null)
                 .sorted((a, b) -> {
-                    String nameA = a.getSystemName() != null ? a.getSystemName() : "";
-                    String nameB = b.getSystemName() != null ? b.getSystemName() : "";
+                    String nameA = a.getSystemName();
+                    String nameB = b.getSystemName();
                     return nameA.compareToIgnoreCase(nameB);
                 })
                 .collect(Collectors.toList());
     }
 
     public Optional<StoredConfig> findBySystemName(String systemName) {
-        return repository.findBySystemName(sanitize(systemName))
+        return repository.findBySystemName(SystemNameUtils.sanitize(systemName))
                 .map(mapper::toModel);
     }
 
@@ -62,7 +63,7 @@ public class ConfigService {
         // Валидируем конфиг перед обновлением
         validateConfig(newConfig);
         
-        StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
+        StoredConfigEntity entity = repository.findBySystemName(SystemNameUtils.sanitize(systemName))
                 .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
         int newVersion = entity.getVersion() + 1;
@@ -74,7 +75,7 @@ public class ConfigService {
 
     @Transactional
     public boolean revertToStart(String systemName) {
-        StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
+        StoredConfigEntity entity = repository.findBySystemName(SystemNameUtils.sanitize(systemName))
                 .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
         StoredConfig stored = mapper.toModel(entity);
@@ -107,7 +108,7 @@ public class ConfigService {
 
     @Transactional
     public CheckUpdateResponse checkUpdate(CheckUpdateRequest request) {
-        String sanitizedName = sanitize(request.getSystemName());
+        String sanitizedName = SystemNameUtils.sanitize(request.getSystemName());
         String incomingVersion = request.getVersion();
         JsonNode incomingConfig = request.getConfig();
         
@@ -170,7 +171,7 @@ public class ConfigService {
         if (request.getConfig() != null) {
             validateConfig(request.getConfig());
         }
-        String sanitizedName = sanitize(request.getSystemName());
+        String sanitizedName = SystemNameUtils.sanitize(request.getSystemName());
         Optional<StoredConfigEntity> currentOpt = repository.findBySystemName(sanitizedName);
         JsonNode incoming = request.getConfig();
 
@@ -227,7 +228,7 @@ public class ConfigService {
     }
 
     public ConfigResponse getConfig(String systemName, String version) {
-        StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
+        StoredConfigEntity entity = repository.findBySystemName(SystemNameUtils.sanitize(systemName))
                 .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
         StoredConfig stored = mapper.toModel(entity);
@@ -252,7 +253,7 @@ public class ConfigService {
             stored.getSystemName(),
             versionToReturn,
             configToReturn,
-            stored.getUpdatedAt().toString()
+            stored.getUpdatedAt() != null ? stored.getUpdatedAt().toString() : Instant.now().toString()
         );
     }
 
@@ -288,12 +289,12 @@ public class ConfigService {
         }
         
         // Проверяем, соответствует ли мок шаблону system-integration-mock
-        if (!isValidTemplate(systemName)) {
+        if (!SystemNameUtils.isValidTemplate(systemName)) {
             return;
         }
         
         // Извлекаем название системы (до первого тире)
-        String groupName = extractSystemPrefix(systemName);
+        String groupName = SystemNameUtils.extractSystemPrefix(systemName);
         if (groupName == null || groupName.isEmpty()) {
             return;
         }
@@ -325,47 +326,6 @@ public class ConfigService {
         }
     }
     
-    /**
-     * Проверяет, соответствует ли название мока шаблону system-integration-mock.
-     * Шаблон: минимум 2 тире и заканчивается на -mock
-     */
-    private boolean isValidTemplate(String systemName) {
-        if (systemName == null || systemName.isEmpty()) {
-            return false;
-        }
-        // Шаблон: название_системы-название_эмуляции-mock
-        // Должно быть минимум 2 тире и заканчиваться на -mock
-        int dashCount = 0;
-        for (char c : systemName.toCharArray()) {
-            if (c == '-') {
-                dashCount++;
-            }
-        }
-        return dashCount >= 2 && systemName.endsWith("-mock");
-    }
-    
-    /**
-     * Извлекает название системы из шаблона system-integration-mock.
-     * Возвращает часть до первого тире.
-     */
-    private String extractSystemPrefix(String systemName) {
-        if (systemName == null || systemName.isEmpty()) {
-            return systemName;
-        }
-        // Берем первое слово до первого тире
-        int firstDashIndex = systemName.indexOf('-');
-        if (firstDashIndex > 0) {
-            return systemName.substring(0, firstDashIndex);
-        }
-        return systemName;
-    }
-    
-    private String sanitize(String name) {
-        if (name == null) {
-            return "";
-        }
-        return name.replaceAll("[^a-zA-Z0-9-_]", "_");
-    }
 
     private String jsonToString(JsonNode jsonNode) {
         if (jsonNode == null) {
@@ -530,7 +490,7 @@ public class ConfigService {
     @Transactional
     public boolean updateConfigFromForm(String systemName, Map<String, String> delays, 
                                         Map<String, String> stringParams, Map<String, String> intParams, Map<String, String> booleanVariables, String loggingLv) {
-        StoredConfigEntity entity = repository.findBySystemName(sanitize(systemName))
+        StoredConfigEntity entity = repository.findBySystemName(SystemNameUtils.sanitize(systemName))
                 .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
         StoredConfig stored = mapper.toModel(entity);
@@ -729,7 +689,7 @@ public class ConfigService {
 
     @Transactional
     public void deleteConfig(String systemName) {
-        String sanitizedName = sanitize(systemName);
+        String sanitizedName = SystemNameUtils.sanitize(systemName);
         if (!repository.existsBySystemName(sanitizedName)) {
             throw new IllegalArgumentException("Config not found: " + systemName);
         }

@@ -710,6 +710,16 @@
                     ${availableTemplates}
                 </div>
             </div>
+            <div style="margin-top: 12px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Комментарий (необязательно):</label>
+                <input type="text" 
+                       name="timePoint_${timePointCounter}_comment" 
+                       id="timePoint_${timePointCounter}_comment"
+                       placeholder="Комментарий для этой временной точки"
+                       maxlength="500"
+                       value=""
+                       style="width: 100%; padding: 8px; border: 1px solid #d0d0d0; border-radius: 4px;"/>
+            </div>
         `;
         
         container.appendChild(timePointDiv);
@@ -895,11 +905,16 @@
                 return;
             }
             
+            // Получаем комментарий для этой временной точки
+            const commentInput = timePoint.querySelector('input[id$="_comment"]');
+            const comment = commentInput ? commentInput.value.trim() : '';
+            
             templateCheckboxes.forEach(checkbox => {
                 timePoints.push({
                     day: dayValue,
                     time: timeValue,
-                    templateId: checkbox.value
+                    templateId: checkbox.value,
+                    comment: comment
                 });
             });
         });
@@ -945,7 +960,8 @@
             return {
                 templateId: tp.templateId,
                 delayMs: 0,
-                scheduledTime: scheduledTime
+                scheduledTime: scheduledTime,
+                comment: tp.comment || null
             };
         });
         

@@ -7,6 +7,8 @@ import com.mockcontroller.model.Template;
 import com.mockcontroller.service.ConfigService;
 import com.mockcontroller.service.ScheduledConfigService;
 import com.mockcontroller.service.TemplateService;
+import com.mockcontroller.util.DateTimeUtils;
+import com.mockcontroller.util.SystemNameUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +20,6 @@ import com.mockcontroller.model.ScheduledConfigUpdate;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +32,6 @@ public class ConfigPageController {
     private final ConfigService configService;
     private final ScheduledConfigService scheduledConfigService;
     private final TemplateService templateService;
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss dd-MM-yyyy");
     
     // Внутренний класс для передачи данных системы
     public static class SystemInfo {
@@ -67,8 +67,8 @@ public class ConfigPageController {
         for (StoredConfig config : allConfigs) {
             String systemName = config.getSystemName();
             // Проверяем шаблон: название_системы-название_эмуляции-mock
-            if (isValidTemplate(systemName)) {
-                String systemPrefix = extractSystemPrefix(systemName);
+            if (SystemNameUtils.isValidTemplate(systemName)) {
+                String systemPrefix = SystemNameUtils.extractSystemPrefix(systemName);
                 groupedBySystem.computeIfAbsent(systemPrefix, k -> new ArrayList<>()).add(config);
             } else {
                 invalidConfigs.add(config);
@@ -141,36 +141,6 @@ public class ConfigPageController {
         return "index";
     }
     
-    private boolean isValidTemplate(String systemName) {
-        if (systemName == null || systemName.isEmpty()) {
-            return false;
-        }
-        // Шаблон: название_системы-название_эмуляции-mock
-        // Должно быть минимум 2 тире и заканчиваться на -mock
-        int dashCount = 0;
-        for (char c : systemName.toCharArray()) {
-            if (c == '-') {
-                dashCount++;
-            }
-        }
-        return dashCount >= 2 && systemName.endsWith("-mock");
-    }
-    
-    private String sanitize(String name) {
-        if (name == null) {
-            return "";
-        }
-        return name.replaceAll("[^a-zA-Z0-9-_]", "_");
-    }
-    
-    private String extractSystemPrefix(String systemName) {
-        // Берем первое слово до первого тире
-        int firstDashIndex = systemName.indexOf('-');
-        if (firstDashIndex > 0) {
-            return systemName.substring(0, firstDashIndex);
-        }
-        return systemName;
-    }
 
     @GetMapping("/configs/{systemName}")
     public String configPage(@PathVariable String systemName, Model model) {
@@ -195,11 +165,15 @@ public class ConfigPageController {
             // Получаем все запланированные обновления и форматируем даты
             // Используем санитизированное имя для консистентности (как в ConfigService)
             // ConfigService.findBySystemName использует sanitize внутри, поэтому используем то же имя
-            String sanitizedName = sanitize(decodedName);
+            String sanitizedName = SystemNameUtils.sanitize(decodedName);
             List<ScheduledConfigUpdate> scheduledUpdates = scheduledConfigService.getScheduledUpdates(sanitizedName);
             Map<String, String> formattedScheduledTimes = new HashMap<>();
             for (ScheduledConfigUpdate update : scheduledUpdates) {
-                formattedScheduledTimes.put(update.getId(), update.getScheduledTime().format(DATE_TIME_FORMATTER));
+                if (update.getScheduledTime() != null) {
+                    formattedScheduledTimes.put(update.getId(), update.getScheduledTime().format(DateTimeUtils.DATE_TIME_FORMATTER));
+                } else {
+                    formattedScheduledTimes.put(update.getId(), "N/A");
+                }
             }
             model.addAttribute("scheduledUpdates", scheduledUpdates);
             model.addAttribute("formattedScheduledTimes", formattedScheduledTimes);
@@ -360,7 +334,7 @@ public class ConfigPageController {
             
             LocalDateTime scheduledTime;
             try {
-                scheduledTime = LocalDateTime.parse(scheduledDateTimeStr, DATE_TIME_FORMATTER);
+                scheduledTime = LocalDateTime.parse(scheduledDateTimeStr, DateTimeUtils.DATE_TIME_FORMATTER);
             } catch (DateTimeParseException e) {
                 return "redirect:/configs/" + java.net.URLEncoder.encode(decodedName, StandardCharsets.UTF_8) + 
                        "?error=" + java.net.URLEncoder.encode("Неверный формат даты. Используйте: hh:mm:ss DD-MM-YYYY", StandardCharsets.UTF_8);

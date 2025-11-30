@@ -23,8 +23,8 @@ spring:
       #           none - ничего не делает
       ddl-auto: update
     
-    # Показывать SQL запросы в консоли (для отладки)
-    show-sql: true
+    # Показывать SQL запросы в консоли (отключено, используем логирование на уровне DEBUG)
+    show-sql: false
     
     properties:
       hibernate:
@@ -40,6 +40,14 @@ spring:
 # Server Configuration
 server:
   port: 8080
+
+# Logging Configuration
+logging:
+  level:
+    # SQL запросы Hibernate выводятся только на уровне DEBUG
+    org.hibernate.SQL: DEBUG
+    # Параметры SQL запросов выводятся только на уровне DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: DEBUG
 
 # Application Configuration
 app:

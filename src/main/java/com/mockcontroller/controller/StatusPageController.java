@@ -5,6 +5,7 @@ import com.mockcontroller.model.StoredConfig;
 import com.mockcontroller.service.ConfigService;
 import com.mockcontroller.service.GroupService;
 import com.mockcontroller.service.MockStatusService;
+import com.mockcontroller.util.SystemNameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -251,8 +252,8 @@ public class StatusPageController {
         
         for (StoredConfig config : configs) {
             String systemName = config.getSystemName();
-            if (isValidTemplate(systemName)) {
-                String systemPrefix = extractSystemPrefix(systemName);
+            if (SystemNameUtils.isValidTemplate(systemName)) {
+                String systemPrefix = SystemNameUtils.extractSystemPrefix(systemName);
                 systems.add(systemPrefix);
             } else {
                 systems.add(systemName);
@@ -262,29 +263,6 @@ public class StatusPageController {
         return systems;
     }
     
-    private boolean isValidTemplate(String systemName) {
-        if (systemName == null || systemName.isEmpty()) {
-            return false;
-        }
-        // Шаблон: название_системы-название_эмуляции-mock
-        // Должно быть минимум 2 тире и заканчиваться на -mock
-        int dashCount = 0;
-        for (char c : systemName.toCharArray()) {
-            if (c == '-') {
-                dashCount++;
-            }
-        }
-        return dashCount >= 2 && systemName.endsWith("-mock");
-    }
-    
-    private String extractSystemPrefix(String systemName) {
-        // Берем первое слово до первого тире
-        int firstDashIndex = systemName.indexOf('-');
-        if (firstDashIndex > 0) {
-            return systemName.substring(0, firstDashIndex);
-        }
-        return systemName;
-    }
 
     public static class SystemStatusView {
         private final String systemName;
