@@ -24,5 +24,11 @@ public interface ScheduledConfigUpdateRepository extends JpaRepository<Scheduled
     @Modifying
     @Query("DELETE FROM ScheduledConfigUpdateEntity s WHERE s.systemName = :systemName")
     void deleteBySystemName(String systemName);
+    
+    /**
+     * Находит запланированные обновления для указанной системы и времени
+     */
+    @Query("SELECT s FROM ScheduledConfigUpdateEntity s WHERE s.systemName = :systemName AND s.scheduledTime = :scheduledTime ORDER BY s.createdAt ASC")
+    List<ScheduledConfigUpdateEntity> findBySystemNameAndScheduledTime(String systemName, LocalDateTime scheduledTime);
 }
 
