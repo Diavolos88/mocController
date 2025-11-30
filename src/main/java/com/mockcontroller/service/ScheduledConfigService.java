@@ -175,13 +175,15 @@ public class ScheduledConfigService {
         List<ScheduledConfigUpdateEntity> dueUpdates = repository.findDueUpdates(now);
 
         // Группируем обновления по системе и времени для корректной обработки дубликатов
-        java.util.Map<String, List<ScheduledConfigUpdateEntity>> updatesByKey = new java.util.HashMap<>();
+        // Используем LinkedHashMap для сохранения порядка (dueUpdates уже отсортированы по scheduledTime ASC)
+        java.util.Map<String, List<ScheduledConfigUpdateEntity>> updatesByKey = new java.util.LinkedHashMap<>();
         for (ScheduledConfigUpdateEntity entity : dueUpdates) {
             String key = (entity.getSystemName() != null ? entity.getSystemName() : "unknown") + 
                          "@" + (entity.getScheduledTime() != null ? entity.getScheduledTime().toString() : "unknown");
             updatesByKey.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(entity);
         }
 
+        // Применяем обновления в порядке scheduledTime (который сохраняется благодаря LinkedHashMap)
         for (java.util.Map.Entry<String, List<ScheduledConfigUpdateEntity>> entry : updatesByKey.entrySet()) {
             List<ScheduledConfigUpdateEntity> updates = entry.getValue();
             
