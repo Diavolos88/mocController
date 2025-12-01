@@ -171,23 +171,29 @@ public class ScenarioPageController {
                 LocalDateTime scheduledTime;
 
                 if (step.getScheduledTime() != null) {
-                    // Извлекаем относительное время из scheduledTime (HH:mm)
-                    // scheduledTime хранится как Instant, но содержит только время (часы и минуты)
+                    // Если у шага есть scheduledTime, извлекаем время (HH:mm:ss) из него
                     LocalDateTime stepTime = LocalDateTime.ofInstant(step.getScheduledTime(), java.time.ZoneId.systemDefault());
                     int hours = stepTime.getHour();
                     int minutes = stepTime.getMinute();
                     int seconds = stepTime.getSecond();
                     
-                    // Вычисляем абсолютное время относительно текущего момента
-                    scheduledTime = baseTime.plusHours(hours).plusMinutes(minutes).plusSeconds(seconds);
+                    // Применяем это время к дате baseTime (заменяем время в baseTime на время из scheduledTime)
+                    scheduledTime = baseTime.withHour(hours).withMinute(minutes).withSecond(seconds).withNano(0);
+                    
+                    // Если вычисленное время оказалось раньше baseTime, добавляем один день
+                    if (scheduledTime.isBefore(baseTime)) {
+                        scheduledTime = scheduledTime.plusDays(1);
+                    }
                 } else {
+                    // Если нет scheduledTime, используем delayMs относительно baseTime
                     long delaySeconds = step.getDelayMs() / 1000;
                     scheduledTime = baseTime.plusSeconds(delaySeconds);
                 }
 
                 // Убеждаемся, что время не в прошлом
-                if (scheduledTime.isBefore(LocalDateTime.now())) {
-                    scheduledTime = LocalDateTime.now().plusSeconds(1);
+                LocalDateTime now = LocalDateTime.now();
+                if (scheduledTime.isBefore(now)) {
+                    scheduledTime = now.plusSeconds(1);
                 }
 
                 // Используем комментарий из шага, если он есть, иначе создаем стандартный
@@ -241,13 +247,21 @@ public class ScenarioPageController {
                 LocalDateTime scheduledTime;
 
                 if (step.getScheduledTime() != null) {
-                    // Если у шага есть scheduledTime, используем его как абсолютное время
-                    scheduledTime = LocalDateTime.ofInstant(step.getScheduledTime(), java.time.ZoneId.systemDefault());
-                    // Но пересчитываем относительно startTime
-                    long stepDelaySeconds = step.getDelayMs() / 1000;
-                    scheduledTime = startTime.plusSeconds(stepDelaySeconds);
+                    // Если у шага есть scheduledTime, извлекаем время (HH:mm:ss) из него
+                    LocalDateTime stepTime = LocalDateTime.ofInstant(step.getScheduledTime(), java.time.ZoneId.systemDefault());
+                    int hours = stepTime.getHour();
+                    int minutes = stepTime.getMinute();
+                    int seconds = stepTime.getSecond();
+                    
+                    // Применяем это время к дате startTime (заменяем время в startTime на время из scheduledTime)
+                    scheduledTime = startTime.withHour(hours).withMinute(minutes).withSecond(seconds).withNano(0);
+                    
+                    // Если вычисленное время оказалось раньше startTime, добавляем один день
+                    if (scheduledTime.isBefore(startTime)) {
+                        scheduledTime = scheduledTime.plusDays(1);
+                    }
                 } else {
-                    // Используем delayMs относительно startTime
+                    // Если нет scheduledTime, используем delayMs относительно startTime
                     long delaySeconds = step.getDelayMs() / 1000;
                     scheduledTime = startTime.plusSeconds(delaySeconds);
                 }
