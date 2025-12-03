@@ -320,6 +320,45 @@
             background: linear-gradient(135deg, #45a049 0%, #388e3c 100%);
             box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
+        /* Toast notification styles */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            min-width: 300px;
+            max-width: 500px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+        .toast.show {
+            display: block;
+        }
+        .toast.success {
+            border-left: 4px solid #4caf50;
+        }
+        .toast.error {
+            border-left: 4px solid #f44336;
+        }
+        .toast-message {
+            font-size: 14px;
+            color: #333;
+            margin: 0;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
         .schedule-form {
             display: flex;
             gap: 8px;
@@ -426,13 +465,16 @@
                 <a th:href="@{/scenarios/{id}(id=${scenario.id})}" class="btn btn-scenario btn-view">Просмотр</a>
             </div>
             <div class="card-actions-right">
-                <form th:action="@{/scenarios/{id}/execute(id=${scenario.id})}" method="post" style="margin: 0;">
+                <form th:data-scenario-id="${scenario.id}" 
+                      class="execute-form" 
+                      style="margin: 0;"
+                      onsubmit="executeScenarioNow(event, this)">
                     <button type="submit" class="btn btn-apply-now">Применить сейчас</button>
                 </form>
-                <form th:action="@{/scenarios/{id}/execute-scheduled(id=${scenario.id})}" 
-                      method="post" 
+                <form th:data-scenario-id="${scenario.id}"
                       class="schedule-form"
-                      th:onsubmit="return validateScheduleForm(this, event)">
+                      style="margin: 0;"
+                      onsubmit="executeScenarioScheduled(event, this)">
                     <button type="submit" class="btn btn-schedule">Применить с задержкой</button>
                     <div class="schedule-inputs">
                         <div class="schedule-input-group">
@@ -462,6 +504,11 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Toast notification container -->
+<div id="toast" class="toast">
+    <p class="toast-message" id="toastMessage"></p>
 </div>
 
 <script th:inline="javascript">
@@ -498,22 +545,66 @@
         });
     });
 
-    function validateScheduleForm(form, event) {
+    function showToast(message, isSuccess) {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        toastMessage.textContent = message;
+        toast.className = 'toast ' + (isSuccess ? 'success' : 'error');
+        toast.classList.add('show');
+        
+        setTimeout(function() {
+            toast.classList.remove('show');
+        }, 4000);
+    }
+    
+    function executeScenarioNow(event, form) {
+        event.preventDefault();
+        const scenarioId = form.getAttribute('data-scenario-id');
+        const button = form.querySelector('button[type="submit"]');
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Планирование...';
+        
+        fetch('/scenarios/' + scenarioId + '/execute', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            button.disabled = false;
+            button.textContent = originalText;
+            if (data.success) {
+                showToast(data.message, true);
+            } else {
+                showToast(data.message, false);
+            }
+        })
+        .catch(error => {
+            button.disabled = false;
+            button.textContent = originalText;
+            showToast('Ошибка при выполнении сценария: ' + error.message, false);
+        });
+    }
+    
+    function executeScenarioScheduled(event, form) {
+        event.preventDefault();
         const dateTimeInput = form.querySelector('input[name="scheduledDateTime"]');
-        const dateTimeValue = dateTimeInput.value.trim();
+        const dateTimeValue = dateTimeInput ? dateTimeInput.value.trim() : '';
+        const commentInput = form.querySelector('input[name="scheduleComment"]');
+        const commentValue = commentInput ? commentInput.value.trim() : '';
         
         if (!dateTimeValue) {
-            alert('Введите дату и время для отложенного применения');
-            event.preventDefault();
-            return false;
+            showToast('Введите дату и время для отложенного применения', false);
+            return;
         }
         
         // Проверка формата
         const pattern = /^\d{2}:\d{2}:\d{2} \d{2}-\d{2}-\d{4}$/;
         if (!pattern.test(dateTimeValue)) {
-            alert('Некорректный формат даты и времени. Используйте формат: hh:mm:ss DD-MM-YYYY');
-            event.preventDefault();
-            return false;
+            showToast('Некорректный формат даты и времени. Используйте формат: hh:mm:ss DD-MM-YYYY', false);
+            return;
         }
         
         // Проверка валидности даты
@@ -522,27 +613,60 @@
         const [day, month, year] = datePart.split('-').map(Number);
         
         if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
-            alert('Некорректное время. Часы: 00-23, минуты и секунды: 00-59');
-            event.preventDefault();
-            return false;
+            showToast('Некорректное время. Часы: 00-23, минуты и секунды: 00-59', false);
+            return;
         }
         
         const date = new Date(year, month - 1, day);
         if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-            alert('Некорректная дата');
-            event.preventDefault();
-            return false;
+            showToast('Некорректная дата', false);
+            return;
         }
         
         // Проверка, что дата не в прошлом
         const scheduledDate = new Date(year, month - 1, day, hours, minutes, seconds);
         if (scheduledDate < new Date()) {
-            alert('Нельзя запланировать сценарий на прошедшее время');
-            event.preventDefault();
-            return false;
+            showToast('Нельзя запланировать сценарий на прошедшее время', false);
+            return;
         }
         
-        return true;
+        const scenarioId = form.getAttribute('data-scenario-id');
+        const button = form.querySelector('button[type="submit"]');
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Планирование...';
+        
+        const formData = new URLSearchParams();
+        formData.append('scheduledDateTime', dateTimeValue);
+        if (commentValue) {
+            formData.append('scheduleComment', commentValue);
+        }
+        
+        fetch('/scenarios/' + scenarioId + '/execute-scheduled', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            button.disabled = false;
+            button.textContent = originalText;
+            if (data.success) {
+                showToast(data.message, true);
+                // Очищаем поля формы
+                if (dateTimeInput) dateTimeInput.value = '';
+                if (commentInput) commentInput.value = '';
+            } else {
+                showToast(data.message, false);
+            }
+        })
+        .catch(error => {
+            button.disabled = false;
+            button.textContent = originalText;
+            showToast('Ошибка при планировании сценария: ' + error.message, false);
+        });
     }
     /*]]>*/
 </script>

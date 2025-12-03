@@ -2,6 +2,7 @@ package com.mockcontroller.controller;
 
 import com.mockcontroller.model.Group;
 import com.mockcontroller.model.Scenario;
+import com.mockcontroller.model.ScenarioExecutionResponse;
 import com.mockcontroller.model.ScenarioStep;
 import com.mockcontroller.model.Template;
 import com.mockcontroller.service.GroupService;
@@ -12,6 +13,8 @@ import com.mockcontroller.util.DateTimeUtils;
 import com.mockcontroller.util.SystemNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -164,15 +167,16 @@ public class ScenarioPageController {
     }
 
     @PostMapping("/scenarios/{id}/execute")
-    public String executeScenario(@PathVariable String id) {
+    @ResponseBody
+    public ResponseEntity<ScenarioExecutionResponse> executeScenario(@PathVariable String id) {
         try {
             Scenario scenario = scenarioService.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Scenario not found"));
 
             if (scenario.getSteps() == null || scenario.getSteps().isEmpty()) {
                 logger.warn("Attempted to execute scenario {} with no steps", id);
-                return "redirect:/scenarios/" + id + "?error=" +
-                       URLEncoder.encode("Сценарий не содержит шагов", StandardCharsets.UTF_8);
+                return ResponseEntity.badRequest()
+                    .body(new ScenarioExecutionResponse(false, "Сценарий не содержит шагов", 0));
             }
 
             LocalDateTime baseTime = LocalDateTime.now();
@@ -183,15 +187,17 @@ public class ScenarioPageController {
                 if (step.getTemplate() == null) {
                     logger.error("Step {} in scenario {} has no template (templateId: {})", 
                         step.getStepOrder(), id, step.getTemplateId());
-                    return "redirect:/scenarios/" + id + "?error=" +
-                           URLEncoder.encode("Шаг " + step.getStepOrder() + " не содержит шаблона. Возможно, шаблон был удален.", StandardCharsets.UTF_8);
+                    return ResponseEntity.badRequest()
+                        .body(new ScenarioExecutionResponse(false, 
+                            "Шаг " + step.getStepOrder() + " не содержит шаблона. Возможно, шаблон был удален.", 0));
                 }
 
                 if (step.getTemplate().getSystemName() == null || step.getTemplate().getConfig() == null) {
                     logger.error("Step {} in scenario {} has template with null systemName or config", 
                         step.getStepOrder(), id);
-                    return "redirect:/scenarios/" + id + "?error=" +
-                           URLEncoder.encode("Шаг " + step.getStepOrder() + " содержит некорректный шаблон", StandardCharsets.UTF_8);
+                    return ResponseEntity.badRequest()
+                        .body(new ScenarioExecutionResponse(false, 
+                            "Шаг " + step.getStepOrder() + " содержит некорректный шаблон", 0));
                 }
 
                 LocalDateTime scheduledTime;
@@ -240,27 +246,29 @@ public class ScenarioPageController {
                 } catch (Exception e) {
                     logger.error("Failed to schedule step {} of scenario {}: {}", 
                         step.getStepOrder(), id, e.getMessage(), e);
-                    return "redirect:/scenarios/" + id + "?error=" +
-                           URLEncoder.encode("Ошибка при планировании шага " + step.getStepOrder() + ": " + e.getMessage(), StandardCharsets.UTF_8);
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ScenarioExecutionResponse(false, 
+                            "Ошибка при планировании шага " + step.getStepOrder() + ": " + e.getMessage(), scheduledCount));
                 }
             }
 
             logger.info("Successfully scheduled {} steps for scenario {}", scheduledCount, id);
-            return "redirect:/scenarios/" + id + "?info=" +
-                   URLEncoder.encode("Сценарий запущен (" + scheduledCount + " шагов запланировано)", StandardCharsets.UTF_8);
+            String message = "Сценарий успешно запланирован (" + scheduledCount + " шагов)";
+            return ResponseEntity.ok(new ScenarioExecutionResponse(true, message, scheduledCount));
         } catch (IllegalArgumentException e) {
             logger.error("Scenario execution failed: {}", e.getMessage());
-            return "redirect:/scenarios/" + id + "?error=" +
-                   URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+            return ResponseEntity.badRequest()
+                .body(new ScenarioExecutionResponse(false, e.getMessage(), 0));
         } catch (Exception e) {
             logger.error("Unexpected error executing scenario {}: {}", id, e.getMessage(), e);
-            return "redirect:/scenarios/" + id + "?error=" +
-                   URLEncoder.encode("Ошибка при выполнении сценария: " + e.getMessage(), StandardCharsets.UTF_8);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ScenarioExecutionResponse(false, "Ошибка при выполнении сценария: " + e.getMessage(), 0));
         }
     }
 
     @PostMapping("/scenarios/{id}/execute-scheduled")
-    public String executeScenarioScheduled(@PathVariable String id,
+    @ResponseBody
+    public ResponseEntity<ScenarioExecutionResponse> executeScenarioScheduled(@PathVariable String id,
                                           @RequestParam String scheduledDateTime,
                                           @RequestParam(required = false) String scheduleComment) {
         try {
@@ -273,20 +281,22 @@ public class ScenarioPageController {
                 java.time.format.DateTimeFormatter formatter = DateTimeUtils.DATE_TIME_FORMATTER;
                 startTime = LocalDateTime.parse(scheduledDateTime, formatter);
             } catch (Exception e) {
-                return "redirect:/scenarios?error=" +
-                       URLEncoder.encode("Неверный формат даты и времени. Используйте: HH:mm:ss dd-MM-yyyy", StandardCharsets.UTF_8);
+                return ResponseEntity.badRequest()
+                    .body(new ScenarioExecutionResponse(false, 
+                        "Неверный формат даты и времени. Используйте: HH:mm:ss dd-MM-yyyy", 0));
             }
 
             // Проверяем, что время начала не в прошлом
             if (startTime.isBefore(LocalDateTime.now())) {
-                return "redirect:/scenarios?error=" +
-                       URLEncoder.encode("Время начала сценария не может быть в прошлом", StandardCharsets.UTF_8);
+                return ResponseEntity.badRequest()
+                    .body(new ScenarioExecutionResponse(false, 
+                        "Время начала сценария не может быть в прошлом", 0));
             }
 
             if (scenario.getSteps() == null || scenario.getSteps().isEmpty()) {
                 logger.warn("Attempted to execute scheduled scenario {} with no steps", id);
-                return "redirect:/scenarios?error=" +
-                       URLEncoder.encode("Сценарий не содержит шагов", StandardCharsets.UTF_8);
+                return ResponseEntity.badRequest()
+                    .body(new ScenarioExecutionResponse(false, "Сценарий не содержит шагов", 0));
             }
 
             // Применяем шаги сценария относительно времени начала
@@ -296,15 +306,17 @@ public class ScenarioPageController {
                 if (step.getTemplate() == null) {
                     logger.error("Step {} in scenario {} has no template (templateId: {})", 
                         step.getStepOrder(), id, step.getTemplateId());
-                    return "redirect:/scenarios?error=" +
-                           URLEncoder.encode("Шаг " + step.getStepOrder() + " не содержит шаблона. Возможно, шаблон был удален.", StandardCharsets.UTF_8);
+                    return ResponseEntity.badRequest()
+                        .body(new ScenarioExecutionResponse(false, 
+                            "Шаг " + step.getStepOrder() + " не содержит шаблона. Возможно, шаблон был удален.", scheduledCount));
                 }
 
                 if (step.getTemplate().getSystemName() == null || step.getTemplate().getConfig() == null) {
                     logger.error("Step {} in scenario {} has template with null systemName or config", 
                         step.getStepOrder(), id);
-                    return "redirect:/scenarios?error=" +
-                           URLEncoder.encode("Шаг " + step.getStepOrder() + " содержит некорректный шаблон", StandardCharsets.UTF_8);
+                    return ResponseEntity.badRequest()
+                        .body(new ScenarioExecutionResponse(false, 
+                            "Шаг " + step.getStepOrder() + " содержит некорректный шаблон", scheduledCount));
                 }
 
                 LocalDateTime scheduledTime;
@@ -349,23 +361,24 @@ public class ScenarioPageController {
                 } catch (Exception e) {
                     logger.error("Failed to schedule step {} of scenario {}: {}", 
                         step.getStepOrder(), id, e.getMessage(), e);
-                    return "redirect:/scenarios?error=" +
-                           URLEncoder.encode("Ошибка при планировании шага " + step.getStepOrder() + ": " + e.getMessage(), StandardCharsets.UTF_8);
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ScenarioExecutionResponse(false, 
+                            "Ошибка при планировании шага " + step.getStepOrder() + ": " + e.getMessage(), scheduledCount));
                 }
             }
 
             logger.info("Successfully scheduled {} steps for scenario {} starting at {}", scheduledCount, id, scheduledDateTime);
 
-            return "redirect:/scenarios/" + id + "?info=" +
-                   URLEncoder.encode("Сценарий запланирован на " + scheduledDateTime + " (" + scheduledCount + " шагов)", StandardCharsets.UTF_8);
+            String message = "Сценарий успешно запланирован на " + scheduledDateTime + " (" + scheduledCount + " шагов)";
+            return ResponseEntity.ok(new ScenarioExecutionResponse(true, message, scheduledCount));
         } catch (IllegalArgumentException e) {
             logger.error("Scenario scheduling failed: {}", e.getMessage());
-            return "redirect:/scenarios?error=" +
-                   URLEncoder.encode("Сценарий не найден", StandardCharsets.UTF_8);
+            return ResponseEntity.badRequest()
+                .body(new ScenarioExecutionResponse(false, "Сценарий не найден", 0));
         } catch (Exception e) {
             logger.error("Unexpected error scheduling scenario {}: {}", id, e.getMessage(), e);
-            return "redirect:/scenarios?error=" +
-                   URLEncoder.encode("Ошибка при планировании сценария: " + e.getMessage(), StandardCharsets.UTF_8);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ScenarioExecutionResponse(false, "Ошибка при планировании сценария: " + e.getMessage(), 0));
         }
     }
 
