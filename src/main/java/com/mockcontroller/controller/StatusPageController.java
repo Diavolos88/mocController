@@ -52,9 +52,24 @@ public class StatusPageController {
         // Получаем все зарегистрированные системы из конфигов
         Set<String> allRegisteredSystems = getAllRegisteredSystems();
         
+        // Находим реальные имена конфигов для каждой системы
+        Collection<StoredConfig> allConfigs = configService.findAll();
+        Map<String, List<String>> systemToConfigNames = new HashMap<>();
+        for (StoredConfig config : allConfigs) {
+            String configSystemName = config.getSystemName();
+            String extractedSystem;
+            if (SystemNameUtils.isValidTemplate(configSystemName)) {
+                extractedSystem = SystemNameUtils.extractSystemPrefix(configSystemName);
+            } else {
+                extractedSystem = configSystemName;
+            }
+            systemToConfigNames.computeIfAbsent(extractedSystem, k -> new ArrayList<>()).add(configSystemName);
+        }
+        
         // Создаем карту для быстрого поиска статусов по systemName
         Map<String, SystemStatusView> statusMap = new HashMap<>();
         for (MockStatusService.SystemStatus status : allStatuses.values()) {
+            List<String> configNames = systemToConfigNames.getOrDefault(status.getSystemName(), new ArrayList<>());
             SystemStatusView view = new SystemStatusView(
                 status.getSystemName(),
                 status.getOnlineCount(),
@@ -62,7 +77,8 @@ public class StatusPageController {
                 status.getTotalCount(),
                 status.getLastHealthcheckTime(),
                 formatTime(status.getLastHealthcheckTime()),
-                status.isAnyOnline()
+                status.isAnyOnline(),
+                configNames
             );
             statusMap.put(status.getSystemName(), view);
         }
@@ -70,6 +86,7 @@ public class StatusPageController {
         // Добавляем системы с 0 подов (которые зарегистрированы, но не имеют инстансов)
         for (String systemName : allRegisteredSystems) {
             if (!statusMap.containsKey(systemName)) {
+                List<String> configNames = systemToConfigNames.getOrDefault(systemName, new ArrayList<>());
                 SystemStatusView view = new SystemStatusView(
                     systemName,
                     0,  // onlineCount
@@ -77,9 +94,27 @@ public class StatusPageController {
                     0,  // totalCount
                     null,  // lastHealthcheckTime
                     "Никогда",  // formattedTime
-                    false  // isAnyOnline
+                    false,  // isAnyOnline
+                    configNames  // реальные имена конфигов
                 );
                 statusMap.put(systemName, view);
+            } else {
+                // Обновляем существующий статус, добавляя реальные имена конфигов
+                SystemStatusView existing = statusMap.get(systemName);
+                List<String> configNames = systemToConfigNames.getOrDefault(systemName, new ArrayList<>());
+                if (!configNames.isEmpty()) {
+                    SystemStatusView updated = new SystemStatusView(
+                        existing.getSystemName(),
+                        existing.getOnlineCount(),
+                        existing.getOfflineCount(),
+                        existing.getTotalCount(),
+                        existing.getLastHealthcheckTime(),
+                        existing.getFormattedTime(),
+                        existing.isAnyOnline(),
+                        configNames
+                    );
+                    statusMap.put(systemName, updated);
+                }
             }
         }
         
@@ -102,6 +137,7 @@ public class StatusPageController {
                     totalInstances += status.getTotalCount();
                 } else if (allRegisteredSystems.contains(systemName)) {
                     // Система зарегистрирована, но не имеет инстансов (0 подов)
+                    List<String> configNames = systemToConfigNames.getOrDefault(systemName, new ArrayList<>());
                     SystemStatusView view = new SystemStatusView(
                         systemName,
                         0,  // onlineCount
@@ -109,7 +145,8 @@ public class StatusPageController {
                         0,  // totalCount
                         null,  // lastHealthcheckTime
                         "Никогда",  // formattedTime
-                        false  // isAnyOnline
+                        false,  // isAnyOnline
+                        configNames
                     );
                     groupSystems.add(view);
                     // totalOnline, totalOffline, totalInstances остаются 0
@@ -272,10 +309,17 @@ public class StatusPageController {
         private final Instant lastHealthcheckTime;
         private final String formattedTime;
         private final boolean isAnyOnline;
+        private final List<String> configNames; // Реальные имена конфигов в базе
 
         public SystemStatusView(String systemName, int onlineCount, int offlineCount, 
                               int totalCount, Instant lastHealthcheckTime, 
                               String formattedTime, boolean isAnyOnline) {
+            this(systemName, onlineCount, offlineCount, totalCount, lastHealthcheckTime, formattedTime, isAnyOnline, new ArrayList<>());
+        }
+
+        public SystemStatusView(String systemName, int onlineCount, int offlineCount, 
+                              int totalCount, Instant lastHealthcheckTime, 
+                              String formattedTime, boolean isAnyOnline, List<String> configNames) {
             this.systemName = systemName;
             this.onlineCount = onlineCount;
             this.offlineCount = offlineCount;
@@ -283,6 +327,7 @@ public class StatusPageController {
             this.lastHealthcheckTime = lastHealthcheckTime;
             this.formattedTime = formattedTime;
             this.isAnyOnline = isAnyOnline;
+            this.configNames = configNames != null ? configNames : new ArrayList<>();
         }
 
         public String getSystemName() { return systemName; }
@@ -292,6 +337,8 @@ public class StatusPageController {
         public Instant getLastHealthcheckTime() { return lastHealthcheckTime; }
         public String getFormattedTime() { return formattedTime; }
         public boolean isAnyOnline() { return isAnyOnline; }
+        public List<String> getConfigNames() { return configNames; }
+        public String getFirstConfigName() { return configNames.isEmpty() ? systemName : configNames.get(0); }
     }
 
     public static class InstanceStatusView {
