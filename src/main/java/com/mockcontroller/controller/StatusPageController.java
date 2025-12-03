@@ -143,27 +143,18 @@ public class StatusPageController {
             int totalOffline = 0;
             int totalInstances = 0;
             
-            for (String fullSystemName : group.getSystemNames()) {
-                // Извлекаем префикс из полного имени системы в группе
-                String extractedPrefix;
-                if (SystemNameUtils.isValidTemplate(fullSystemName)) {
-                    extractedPrefix = SystemNameUtils.extractSystemPrefix(fullSystemName);
-                } else {
-                    extractedPrefix = fullSystemName;
-                }
-                
-                // Ищем статус по извлеченному префиксу
-                SystemStatusView status = statusMap.get(extractedPrefix);
+            for (String systemName : group.getSystemNames()) {
+                SystemStatusView status = statusMap.get(systemName);
                 if (status != null) {
                     groupSystems.add(status);
                     totalOnline += status.getOnlineCount();
                     totalOffline += status.getOfflineCount();
                     totalInstances += status.getTotalCount();
-                } else if (allRegisteredSystems.contains(extractedPrefix)) {
+                } else if (allRegisteredSystems.contains(systemName)) {
                     // Система зарегистрирована, но не имеет инстансов (0 подов)
-                    List<String> configNames = systemToConfigNames.getOrDefault(extractedPrefix, new ArrayList<>());
+                    List<String> configNames = systemToConfigNames.getOrDefault(systemName, new ArrayList<>());
                     SystemStatusView view = new SystemStatusView(
-                        extractedPrefix,
+                        systemName,
                         0,  // onlineCount
                         0,  // offlineCount
                         0,  // totalCount
@@ -194,20 +185,9 @@ public class StatusPageController {
         }
         
         // Добавляем системы без группы в отдельную группу "Без группы"
-        // Создаем множество извлеченных префиксов для всех систем в группах
-        Set<String> groupedSystemPrefixes = new HashSet<>();
-        for (Group group : groups) {
-            for (String fullSystemName : group.getSystemNames()) {
-                // Извлекаем префикс из полного имени системы в группе
-                String extractedPrefix;
-                if (SystemNameUtils.isValidTemplate(fullSystemName)) {
-                    extractedPrefix = SystemNameUtils.extractSystemPrefix(fullSystemName);
-                } else {
-                    extractedPrefix = fullSystemName;
-                }
-                groupedSystemPrefixes.add(extractedPrefix);
-            }
-        }
+        Set<String> groupedSystems = groups.stream()
+            .flatMap(g -> g.getSystemNames().stream())
+            .collect(Collectors.toSet());
         
         List<SystemStatusView> ungroupedSystems = new ArrayList<>();
         int ungroupedOnline = 0;
@@ -215,8 +195,7 @@ public class StatusPageController {
         int ungroupedInstances = 0;
         
         for (SystemStatusView status : statusMap.values()) {
-            // Проверяем, не находится ли извлеченный префикс системы в какой-либо группе
-            if (!groupedSystemPrefixes.contains(status.getSystemName())) {
+            if (!groupedSystems.contains(status.getSystemName())) {
                 ungroupedSystems.add(status);
                 ungroupedOnline += status.getOnlineCount();
                 ungroupedOffline += status.getOfflineCount();
