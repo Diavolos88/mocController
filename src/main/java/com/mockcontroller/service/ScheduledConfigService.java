@@ -86,6 +86,8 @@ public class ScheduledConfigService {
             scheduledTime, 
             comment);
         entity = repository.save(entity);
+        logger.info("Scheduled update created for {} at {} (id: {})", 
+            safeSystemName, scheduledTime, entity.getId());
         return mapper.toModel(entity);
     }
     
@@ -173,6 +175,12 @@ public class ScheduledConfigService {
     public void checkAndApplyScheduledUpdates() {
         LocalDateTime now = LocalDateTime.now();
         List<ScheduledConfigUpdateEntity> dueUpdates = repository.findDueUpdates(now);
+        
+        if (dueUpdates.isEmpty()) {
+            return; // Нет обновлений для применения
+        }
+        
+        logger.debug("Found {} scheduled updates to apply", dueUpdates.size());
 
         // Группируем обновления по системе и времени для корректной обработки дубликатов
         // Используем LinkedHashMap для сохранения порядка (dueUpdates уже отсортированы по scheduledTime ASC)

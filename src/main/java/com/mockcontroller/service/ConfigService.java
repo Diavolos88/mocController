@@ -16,6 +16,8 @@ import com.mockcontroller.model.StoredConfig;
 import com.mockcontroller.model.entity.StoredConfigEntity;
 import com.mockcontroller.repository.StoredConfigRepository;
 import com.mockcontroller.util.SystemNameUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class ConfigService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConfigService.class);
 
     private final ObjectMapper objectMapper;
     private final StoredConfigRepository repository;
@@ -63,45 +67,55 @@ public class ConfigService {
         // Валидируем конфиг перед обновлением
         validateConfig(newConfig);
         
-        StoredConfigEntity entity = repository.findBySystemName(SystemNameUtils.sanitize(systemName))
+        String sanitizedName = SystemNameUtils.sanitize(systemName);
+        StoredConfigEntity entity = repository.findBySystemName(sanitizedName)
                 .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
-        int newVersion = entity.getVersion() + 1;
+        int oldVersion = entity.getVersion();
+        int newVersion = oldVersion + 1;
         entity.setVersion(newVersion);
         entity.setCurrentConfigJson(jsonToString(newConfig));
         entity.setUpdatedAt(Instant.now());
         repository.save(entity);
+        
+        logger.debug("Updated config for {}: v{} -> v{}", systemName, oldVersion, newVersion);
     }
 
     @Transactional
     public boolean revertToStart(String systemName) {
-        StoredConfigEntity entity = repository.findBySystemName(SystemNameUtils.sanitize(systemName))
+        String sanitizedName = SystemNameUtils.sanitize(systemName);
+        StoredConfigEntity entity = repository.findBySystemName(sanitizedName)
                 .orElseThrow(() -> new IllegalArgumentException("Config not found: " + systemName));
         
         StoredConfig stored = mapper.toModel(entity);
         
         // Проверяем, есть ли изменения
         if (jsonEquals(stored.getCurrentConfig(), stored.getStartConfig())) {
+            logger.debug("No changes to revert for {}", systemName);
             return false;
         }
         
         // Есть изменения - возвращаем к стартовому и увеличиваем версию
+        int oldVersion = entity.getVersion();
         try {
             JsonNode startConfigCopy = objectMapper.readTree(
                 objectMapper.writeValueAsString(stored.getStartConfig())
             );
-            int newVersion = entity.getVersion() + 1;
+            int newVersion = oldVersion + 1;
             entity.setVersion(newVersion);
             entity.setCurrentConfigJson(jsonToString(startConfigCopy));
             entity.setUpdatedAt(Instant.now());
             repository.save(entity);
+            logger.info("Reverted config for {} to start: v{} -> v{}", systemName, oldVersion, newVersion);
             return true;
         } catch (Exception e) {
-            int newVersion = entity.getVersion() + 1;
+            logger.warn("Failed to parse start config for {}, using direct copy: {}", systemName, e.getMessage());
+            int newVersion = oldVersion + 1;
             entity.setVersion(newVersion);
             entity.setCurrentConfigJson(entity.getStartConfigJson());
             entity.setUpdatedAt(Instant.now());
             repository.save(entity);
+            logger.info("Reverted config for {} to start (fallback): v{} -> v{}", systemName, oldVersion, newVersion);
             return true;
         }
     }
@@ -195,6 +209,8 @@ public class ConfigService {
             entity.setVersion(versionToUse);
             repository.save(entity);
             
+            logger.info("New config registered for {}: v{}", request.getSystemName(), versionToUse);
+            
             // Автоматическое создание/обновление группы для моков с шаблоном system-integration-mock
             autoCreateOrUpdateGroup(request.getSystemName());
             
@@ -207,12 +223,14 @@ public class ConfigService {
 
         // Сравниваем стартовый конфиг
         if (!jsonEquals(stored.getStartConfig(), incoming)) {
-            int newVersion = current.getVersion() + 1;
+            int oldVersion = current.getVersion();
+            int newVersion = oldVersion + 1;
             current.setVersion(newVersion);
             current.setStartConfigJson(jsonToString(incoming));
             current.setCurrentConfigJson(jsonToString(incoming));
             current.setUpdatedAt(Instant.now());
             repository.save(current);
+            logger.info("Start config updated for {}: v{} -> v{}", request.getSystemName(), oldVersion, newVersion);
             return new ConfigSyncResponse(SyncStatus.UPDATED_START_CONFIG,
                     "Start config updated", "v" + newVersion);
         }
@@ -309,6 +327,7 @@ public class ConfigService {
                 "Автоматически созданная группа для системы " + groupName,
                 java.util.Collections.singletonList(systemName)
             );
+            logger.debug("Auto-created group '{}' for mock '{}'", groupName, systemName);
         } else {
             // Группа существует - проверяем, есть ли в ней этот мок
             com.mockcontroller.model.Group group = groupOpt.get();
@@ -322,6 +341,7 @@ public class ConfigService {
                     group.getDescription(),
                     updatedSystems
                 );
+                logger.debug("Auto-added mock '{}' to existing group '{}'", systemName, groupName);
             }
         }
     }
@@ -694,5 +714,6 @@ public class ConfigService {
             throw new IllegalArgumentException("Config not found: " + systemName);
         }
         repository.deleteById(sanitizedName); // sanitizedName не может быть null после sanitize()
+        logger.info("Deleted config for {}", systemName);
     }
 }
