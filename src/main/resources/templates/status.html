@@ -656,6 +656,13 @@
                             <input type="hidden" name="systemName" th:value="${status.systemName}"/>
                             <button type="submit" class="remove-system-btn" title="Удалить из группы">Удалить</button>
                         </form>
+                        <form th:if="${group.groupId == null}" 
+                              th:action="@{'/configs/' + ${status.systemName} + '?action=delete'}" 
+                              method="post" 
+                              style="margin: 0;"
+                              th:onsubmit="return confirm('Вы уверены, что хотите полностью удалить заглушку ' + '${status.systemName}' + '? Это действие нельзя отменить.');">
+                            <button type="submit" class="remove-system-btn" title="Удалить заглушку" style="background: #d32f2f;">Удалить</button>
+                        </form>
                     </div>
                 </div>
             </div>
