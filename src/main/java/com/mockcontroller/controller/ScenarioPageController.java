@@ -197,19 +197,18 @@ public class ScenarioPageController {
                 LocalDateTime scheduledTime;
 
                 if (step.getScheduledTime() != null) {
-                    // Если у шага есть scheduledTime, извлекаем время (HH:mm:ss) из него
+                    // Если у шага есть scheduledTime, интерпретируем его как относительное смещение от начала дня
+                    // Например, 00:01:00 означает "через 1 минуту от текущего момента"
                     LocalDateTime stepTime = LocalDateTime.ofInstant(step.getScheduledTime(), java.time.ZoneId.systemDefault());
                     int hours = stepTime.getHour();
                     int minutes = stepTime.getMinute();
                     int seconds = stepTime.getSecond();
                     
-                    // Применяем это время к дате baseTime (заменяем время в baseTime на время из scheduledTime)
-                    scheduledTime = baseTime.withHour(hours).withMinute(minutes).withSecond(seconds).withNano(0);
+                    // Вычисляем смещение в секундах от начала дня (00:00:00)
+                    long offsetSeconds = hours * 3600L + minutes * 60L + seconds;
                     
-                    // Если вычисленное время оказалось раньше baseTime, добавляем один день
-                    if (scheduledTime.isBefore(baseTime)) {
-                        scheduledTime = scheduledTime.plusDays(1);
-                    }
+                    // Применяем это смещение к baseTime
+                    scheduledTime = baseTime.plusSeconds(offsetSeconds);
                 } else {
                     // Если нет scheduledTime, используем delayMs относительно baseTime
                     long delaySeconds = step.getDelayMs() / 1000;
@@ -311,19 +310,18 @@ public class ScenarioPageController {
                 LocalDateTime scheduledTime;
 
                 if (step.getScheduledTime() != null) {
-                    // Если у шага есть scheduledTime, извлекаем время (HH:mm:ss) из него
+                    // Если у шага есть scheduledTime, интерпретируем его как относительное смещение от начала дня
+                    // Например, 00:01:00 означает "через 1 минуту от времени начала сценария"
                     LocalDateTime stepTime = LocalDateTime.ofInstant(step.getScheduledTime(), java.time.ZoneId.systemDefault());
                     int hours = stepTime.getHour();
                     int minutes = stepTime.getMinute();
                     int seconds = stepTime.getSecond();
                     
-                    // Применяем это время к дате startTime (заменяем время в startTime на время из scheduledTime)
-                    scheduledTime = startTime.withHour(hours).withMinute(minutes).withSecond(seconds).withNano(0);
+                    // Вычисляем смещение в секундах от начала дня (00:00:00)
+                    long offsetSeconds = hours * 3600L + minutes * 60L + seconds;
                     
-                    // Если вычисленное время оказалось раньше startTime, добавляем один день
-                    if (scheduledTime.isBefore(startTime)) {
-                        scheduledTime = scheduledTime.plusDays(1);
-                    }
+                    // Применяем это смещение к startTime
+                    scheduledTime = startTime.plusSeconds(offsetSeconds);
                 } else {
                     // Если нет scheduledTime, используем delayMs относительно startTime
                     long delaySeconds = step.getDelayMs() / 1000;
