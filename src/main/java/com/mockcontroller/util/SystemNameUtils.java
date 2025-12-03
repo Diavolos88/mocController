@@ -33,16 +33,26 @@ public final class SystemNameUtils {
 
     /**
      * Извлекает название системы из шаблона system-integration-mock.
-     * Возвращает часть до первого тире.
+     * Для шаблона system-integration-mock возвращает system-integration (без -mock).
+     * Для других форматов возвращает часть до первого тире или полное название.
      *
      * @param systemName полное название системы
-     * @return префикс системы (до первого тире) или полное название, если тире нет
+     * @return префикс системы или полное название, если не соответствует шаблону
      */
     public static String extractSystemPrefix(String systemName) {
         if (systemName == null || systemName.isEmpty()) {
             return systemName;
         }
-        // Берем первое слово до первого тире
+        
+        // Если соответствует шаблону system-integration-mock, извлекаем system-integration
+        if (isValidTemplate(systemName)) {
+            // Убираем -mock в конце
+            if (systemName.endsWith("-mock")) {
+                return systemName.substring(0, systemName.length() - 5); // убираем "-mock"
+            }
+        }
+        
+        // Для других форматов берем первое слово до первого тире
         int firstDashIndex = systemName.indexOf('-');
         if (firstDashIndex > 0) {
             return systemName.substring(0, firstDashIndex);
