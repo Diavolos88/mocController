@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -24,6 +25,20 @@ public class StatusPageController {
     private final MockStatusService mockStatusService;
     private final GroupService groupService;
     private final ConfigService configService;
+    
+    @PostMapping("/status/{systemName}/remove")
+    public String removeFromStatus(@PathVariable String systemName) {
+        try {
+            String decodedName = java.net.URLDecoder.decode(systemName, java.nio.charset.StandardCharsets.UTF_8);
+            // Удаляем только healthcheck данные, конфиг остается
+            mockStatusService.removeSystemFromStatus(decodedName);
+            return "redirect:/status?info=" + 
+                   java.net.URLEncoder.encode("Заглушка '" + decodedName + "' удалена из статусов", java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "redirect:/status?error=" + 
+                   java.net.URLEncoder.encode("Ошибка при удалении из статусов: " + e.getMessage(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+    }
     
     @Value("${app.faq.url:}")
     private String faqUrl;

@@ -128,6 +128,16 @@ public class MockStatusService {
         Instant threshold = Instant.now().minus(cleanupThresholdSeconds, ChronoUnit.SECONDS);
         repository.deleteOldInstances(threshold);
     }
+    
+    /**
+     * Удаляет все healthcheck данные для указанной системы.
+     * Это удаляет только инстансы из статусов, но не удаляет конфиг заглушки.
+     */
+    @Transactional
+    public void removeSystemFromStatus(String systemName) {
+        String safeSystemName = sanitize(systemName);
+        repository.deleteBySystemName(safeSystemName);
+    }
 
     /**
      * Проверяет статус группы: есть ли хотя бы одна онлайн под для каждой заглушки в группе

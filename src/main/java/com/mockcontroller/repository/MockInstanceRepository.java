@@ -17,6 +17,10 @@ public interface MockInstanceRepository extends JpaRepository<MockInstanceEntity
     Optional<MockInstanceEntity> findBySystemNameAndInstanceId(String systemName, String instanceId);
 
     List<MockInstanceEntity> findBySystemName(String systemName);
+    
+    @Modifying
+    @Query("DELETE FROM MockInstanceEntity m WHERE m.systemName = :systemName")
+    void deleteBySystemName(@Param("systemName") String systemName);
 
     List<MockInstanceEntity> findAllByOrderBySystemNameAsc();
 
