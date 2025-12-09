@@ -73,8 +73,10 @@ public class ScheduledConfigService {
                 }
                 
                 ScheduledConfigUpdateEntity updatedEntity = repository.save(existing);
-                logger.debug("Duplicate scheduled update found for {} at {}. Merged comments: {}", 
+                logger.debug("Duplicate scheduled update found for {} at {}. Merged comments: '{}'", 
                     safeSystemName, scheduledTime, mergedComment);
+                logger.info("Scheduled update merged for {} at {} (id: {}) with comment: '{}'", 
+                    safeSystemName, scheduledTime, updatedEntity.getId(), updatedEntity.getComment());
                 return mapper.toModel(updatedEntity);
             }
         }
@@ -86,8 +88,8 @@ public class ScheduledConfigService {
             scheduledTime, 
             comment);
         entity = repository.save(entity);
-        logger.info("Scheduled update created for {} at {} (id: {})", 
-            safeSystemName, scheduledTime, entity.getId());
+        logger.info("Scheduled update created for {} at {} (id: {}) with comment: '{}'", 
+            safeSystemName, scheduledTime, entity.getId(), entity.getComment());
         return mapper.toModel(entity);
     }
     
@@ -115,7 +117,8 @@ public class ScheduledConfigService {
     }
     
     /**
-     * Объединяет два комментария, избегая дублирования
+     * Объединяет два комментария, избегая дублирования.
+     * Если новый комментарий содержит "Сценарий:", а старый нет, используем новый формат.
      */
     private String mergeComments(String existingComment, String newComment) {
         if (existingComment == null || existingComment.trim().isEmpty()) {
@@ -130,7 +133,20 @@ public class ScheduledConfigService {
             return existingComment;
         }
         
-        // Объединяем комментарии через разделитель
+        // Если новый комментарий в правильном формате (содержит "Сценарий:"), а старый нет - используем новый
+        boolean newHasScenario = newComment.contains("Сценарий:");
+        boolean oldHasScenario = existingComment.contains("Сценарий:");
+        
+        if (newHasScenario && !oldHasScenario) {
+            // Новый комментарий в правильном формате, старый - нет, используем новый
+            return newComment;
+        }
+        if (!newHasScenario && oldHasScenario) {
+            // Старый комментарий в правильном формате, новый - нет, используем старый
+            return existingComment;
+        }
+        
+        // Если оба в правильном формате или оба в старом - объединяем через разделитель
         return existingComment + " | " + newComment;
     }
     

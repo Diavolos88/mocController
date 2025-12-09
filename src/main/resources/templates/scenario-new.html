@@ -431,11 +431,6 @@
             <input type="text" id="scenarioName" name="name" required placeholder="Например: Отказы заглушек" maxlength="255"/>
         </div>
 
-        <div class="form-group">
-            <label for="scenarioDescription">Описание (необязательно)</label>
-            <textarea id="scenarioDescription" name="description" placeholder="Описание сценария..."></textarea>
-        </div>
-
         <div class="form-group system-select">
             <label for="groupSelect">Выберите группу *</label>
             <select id="groupSelect" name="group" required onchange="loadGroupTemplates(this.value)">
@@ -969,7 +964,7 @@
         const requestBody = {
             groupId: groupSelect.value,
             name: scenarioName,
-            description: document.getElementById('scenarioDescription').value.trim() || null,
+            description: null,
             steps: steps
         };
         

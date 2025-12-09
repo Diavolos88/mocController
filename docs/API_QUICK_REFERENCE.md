@@ -260,7 +260,7 @@ curl -X GET http://localhost:8080/api/configs/auth-mock/scheduled
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "systemName": "auth-mock",
     "scheduledTime": "14:30:00 25-12-2024",
-    "comment": "Увеличение задержек",
+    "comment": "Сценарий: Название сценария|Комментарий ступени: Увеличение задержек",
     "createdAt": "10:15:00 20-12-2024"
   }
 ]

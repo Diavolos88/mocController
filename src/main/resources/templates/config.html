@@ -1003,18 +1003,31 @@
                     </button>
                 </form>
             </div>
-            <div th:each="update : ${scheduledUpdates}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 8px; background: white; border-radius: 6px; border: 1px solid #90caf9; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="display: flex; align-items: center; gap: 24px; flex: 1;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 14px; color: #666; font-weight: 500;">Дата и время:</span>
-                        <span style="font-size: 15px; color: #1976d2; font-weight: 600;" th:text="${formattedScheduledTimes[update.id]}"></span>
+            <div th:each="update : ${scheduledUpdates}" style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px; margin-bottom: 8px; background: white; border-radius: 6px; border: 1px solid #90caf9; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 24px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 14px; color: #666; font-weight: 500;">Дата и время:</span>
+                            <span style="font-size: 15px; color: #1976d2; font-weight: 600;" th:text="${formattedScheduledTimes[update.id]}"></span>
+                        </div>
                     </div>
-                    <div th:if="${update.comment != null && !update.comment.isEmpty()}" style="display: flex; align-items: center; gap: 8px; padding-left: 24px; border-left: 2px solid #e3f2fd;">
-                        <span style="font-size: 14px; color: #666; font-weight: 500;">Комментарий:</span>
-                        <span style="font-size: 15px; color: #333; font-weight: 500; font-style: italic;" th:text="${update.comment}"></span>
+                    <div th:if="${update.comment != null && !update.comment.isEmpty()}" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-left: 8px; border-left: 2px solid #e3f2fd;">
+                        <div th:if="${#strings.contains(update.comment, 'Сценарий:')}" style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 15px; color: #666; font-weight: 600;">Название сценария:</span>
+                            <span style="font-size: 16px; color: #1976d2; font-weight: 600;" 
+                                  th:text="${#strings.contains(update.comment, '|') ? #strings.substringAfter(#strings.substringBefore(update.comment, '|'), 'Сценарий: ').trim() : #strings.substringAfter(update.comment, 'Сценарий: ').trim()}"></span>
+                        </div>
+                        <div th:if="${#strings.contains(update.comment, 'Комментарий ступени:')}" style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 15px; color: #666; font-weight: 600;">Комментарий ступени:</span>
+                            <span style="font-size: 16px; color: #333; font-weight: 500;" th:text="${#strings.substringAfter(update.comment, 'Комментарий ступени: ').trim()}"></span>
+                        </div>
+                        <div th:if="${!#strings.contains(update.comment, 'Сценарий:') && !#strings.contains(update.comment, 'Комментарий ступени:')}" style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 15px; color: #666; font-weight: 500;">Комментарий:</span>
+                            <span style="font-size: 16px; color: #333; font-weight: 500;" th:text="${update.comment}"></span>
+                        </div>
                     </div>
                 </div>
-                <form th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0; margin-left: 16px;">
+                <form th:action="@{'/configs/' + ${systemName}}" method="post" style="margin: 0; margin-left: 16px; align-self: flex-start;">
                     <input type="hidden" name="action" value="cancelSchedule"/>
                     <input type="hidden" name="updateId" th:value="${update.id}"/>
                     <button type="submit" style="padding: 6px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;" onmouseover="this.style.background='#d32f2f'" onmouseout="this.style.background='#f44336'">Отменить</button>

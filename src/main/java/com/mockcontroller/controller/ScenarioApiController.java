@@ -212,12 +212,26 @@ public class ScenarioApiController {
                     scheduledTime = LocalDateTime.now().plusSeconds(1);
                 }
 
+                // Формируем комментарий: название сценария и комментарий шага
+                String comment = "Сценарий: " + scenario.getName();
+                if (step.getComment() != null && !step.getComment().trim().isEmpty()) {
+                    String stepComment = step.getComment().trim();
+                    // Убираем префикс "Комментарий ступени: " если он уже есть
+                    if (stepComment.startsWith("Комментарий ступени: ")) {
+                        stepComment = stepComment.substring("Комментарий ступени: ".length());
+                    }
+                    comment += "|Комментарий ступени: " + stepComment;
+                }
+                
+                logger.debug("Creating scheduled update with comment: '{}' for scenario '{}' step {}", 
+                    comment, scenario.getName(), step.getStepOrder());
+                
                 // Применяем шаблон через запланированное обновление
                 scheduledConfigService.scheduleUpdate(
                         step.getTemplate().getSystemName(),
                         step.getTemplate().getConfig(),
                         scheduledTime,
-                        "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")"
+                        comment
                 );
             }
 
@@ -265,12 +279,26 @@ public class ScenarioApiController {
                     scheduledTime = LocalDateTime.now().plusSeconds(1);
                 }
 
+                // Формируем комментарий: название сценария и комментарий шага
+                String comment = "Сценарий: " + scenario.getName();
+                if (step.getComment() != null && !step.getComment().trim().isEmpty()) {
+                    String stepComment = step.getComment().trim();
+                    // Убираем префикс "Комментарий ступени: " если он уже есть
+                    if (stepComment.startsWith("Комментарий ступени: ")) {
+                        stepComment = stepComment.substring("Комментарий ступени: ".length());
+                    }
+                    comment += "|Комментарий ступени: " + stepComment;
+                }
+                
+                logger.debug("Creating scheduled update with comment: '{}' for scenario '{}' step {}", 
+                    comment, scenario.getName(), step.getStepOrder());
+                
                 // Применяем шаблон через запланированное обновление
                 scheduledConfigService.scheduleUpdate(
                         step.getTemplate().getSystemName(),
                         step.getTemplate().getConfig(),
                         scheduledTime,
-                        "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")"
+                        comment
                 );
             }
 

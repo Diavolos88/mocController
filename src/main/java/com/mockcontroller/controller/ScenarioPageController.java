@@ -227,10 +227,15 @@ public class ScenarioPageController {
                     scheduledTime = now.plusSeconds(1);
                 }
 
-                // Используем комментарий из шага, если он есть, иначе создаем стандартный
-                String comment = step.getComment();
-                if (comment == null || comment.trim().isEmpty()) {
-                    comment = "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")";
+                // Формируем комментарий: название сценария и комментарий шага
+                String comment = "Сценарий: " + scenario.getName();
+                if (step.getComment() != null && !step.getComment().trim().isEmpty()) {
+                    String stepComment = step.getComment().trim();
+                    // Убираем префикс "Комментарий ступени: " если он уже есть
+                    if (stepComment.startsWith("Комментарий ступени: ")) {
+                        stepComment = stepComment.substring("Комментарий ступени: ".length());
+                    }
+                    comment += "|Комментарий ступени: " + stepComment;
                 }
                 
                 try {
@@ -345,8 +350,27 @@ public class ScenarioPageController {
                     scheduledTime = LocalDateTime.now().plusSeconds(1);
                 }
 
-                String comment = scheduleComment != null && !scheduleComment.trim().isEmpty() ?
-                        scheduleComment : "Сценарий: " + scenario.getName() + " (шаг " + step.getStepOrder() + ")";
+                // Формируем комментарий: название сценария и комментарий шага
+                String comment = "Сценарий: " + scenario.getName();
+                if (step.getComment() != null && !step.getComment().trim().isEmpty()) {
+                    String stepComment = step.getComment().trim();
+                    // Убираем префикс "Комментарий ступени: " если он уже есть
+                    if (stepComment.startsWith("Комментарий ступени: ")) {
+                        stepComment = stepComment.substring("Комментарий ступени: ".length());
+                    }
+                    comment += "|Комментарий ступени: " + stepComment;
+                } else if (scheduleComment != null && !scheduleComment.trim().isEmpty()) {
+                    // Если есть scheduleComment, но нет комментария шага, добавляем его
+                    String scheduleCommentClean = scheduleComment.trim();
+                    // Убираем префикс "Комментарий ступени: " если он уже есть
+                    if (scheduleCommentClean.startsWith("Комментарий ступени: ")) {
+                        scheduleCommentClean = scheduleCommentClean.substring("Комментарий ступени: ".length());
+                    }
+                    comment += "|Комментарий ступени: " + scheduleCommentClean;
+                }
+                
+                logger.debug("Creating scheduled update with comment: '{}' for scenario '{}' step {}", 
+                    comment, scenario.getName(), step.getStepOrder());
 
                 try {
                     scheduledConfigService.scheduleUpdate(
