@@ -51,6 +51,8 @@ logging:
 
 # Application Configuration
 app:
+  api:
+    base-url: ${API_BASE_URL:http://localhost:8085}  # Базовый URL для примеров API вызовов (curl)
   faq:
     url: https://example.com/faq  # URL для кнопки FAQ в навигации
   status:

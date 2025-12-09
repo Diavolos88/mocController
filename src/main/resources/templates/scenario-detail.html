@@ -417,8 +417,9 @@
         <h3>Пример вызова через API:</h3>
         <code id="apiCommand" th:data-group-id="${group.id}" 
               th:data-group-name="${group.name}" 
-              th:data-scenario-name="${scenario.name}">
-            curl -X GET "http://localhost:8080/api/scenarios/execute?group=GROUP&name=SCENARIO&startTime=TIME"
+              th:data-scenario-name="${scenario.name}"
+              th:data-api-base-url="${apiBaseUrl}">
+            curl -X GET "<span th:text="${apiBaseUrl}">http://localhost:8085</span>/api/scenarios/execute?group=GROUP&name=SCENARIO&startTime=TIME"
         </code>
         <button type="button" class="copy-btn" onclick="copyApiCommand()">Скопировать</button>
         <div class="copy-success" id="copySuccess">✓ Скопировано в буфер обмена!</div>
@@ -454,7 +455,8 @@
         
         const startTime = encodeURIComponent(`${hours}:${minutes}:${seconds} ${day}-${month}-${year}`);
         
-        const command = `curl -X GET "http://localhost:8080/api/scenarios/execute?group=${group}&name=${name}&startTime=${startTime}"`;
+        const apiBaseUrl = codeElement.getAttribute('data-api-base-url') || 'http://localhost:8085';
+        const command = `curl -X GET "${apiBaseUrl}/api/scenarios/execute?group=${group}&name=${name}&startTime=${startTime}"`;
         codeElement.textContent = command;
     }
     

@@ -604,7 +604,7 @@
                 <div th:if="${group.groupId != null}" class="group-curl-section">
                     <div class="group-curl-label">Проверка healthcheck группы:</div>
                     <div class="group-curl-container">
-                        <code class="group-curl-command" th:id="'curl-' + ${group.groupId}">curl -X GET "http://localhost:8080/api/groups/healthcheck?groupName=<span th:text="${group.encodedGroupName}">Group%20Name</span>"</code>
+                        <code class="group-curl-command" th:id="'curl-' + ${group.groupId}" th:data-api-base-url="${apiBaseUrl}">curl -X GET "<span th:text="${apiBaseUrl}">http://localhost:8085</span>/api/groups/healthcheck?groupName=<span th:text="${group.encodedGroupName}">Group%20Name</span>"</code>
                         <button type="button" class="group-curl-copy-btn" 
                                 th:data-group-id="${group.groupId}"
                                 onclick="copyCurlFromCode(this)"
