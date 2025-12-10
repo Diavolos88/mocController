@@ -10,13 +10,15 @@ GET /service/healthcheck
 
 **cURL:**
 ```bash
-curl -X GET http://localhost:8080/service/healthcheck
+curl -X GET ${API_BASE_URL:-http://localhost:8085}/service/healthcheck
 ```
 
 **PowerShell:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/service/healthcheck" -Method Get
+$baseUrl = $env:API_BASE_URL; if (-not $baseUrl) { $baseUrl = "http://localhost:8085" }; Invoke-RestMethod -Uri "$baseUrl/service/healthcheck" -Method Get
 ```
+
+**Примечание:** Замените `localhost:8085` на ваш базовый URL из `app.api.base-url` в `application.yml` или `API_BASE_URL`.
 
 **Ответ:**
 ```
@@ -33,12 +35,12 @@ POST /api/healthcheck?systemName={systemName}&instanceId={instanceId}
 
 **cURL:**
 ```bash
-curl -X POST "http://localhost:8080/api/healthcheck?systemName=auth-mock&instanceId=instance-1"
+curl -X POST "http://localhost:8085/api/healthcheck?systemName=auth-mock&instanceId=instance-1"
 ```
 
 **PowerShell:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/api/healthcheck?systemName=auth-mock&instanceId=instance-1" -Method Post
+Invoke-RestMethod -Uri "http://localhost:8085/api/healthcheck?systemName=auth-mock&instanceId=instance-1" -Method Post
 ```
 
 **Ответ:**
@@ -61,13 +63,13 @@ GET /api/groups/healthcheck?groupName={groupName}
 
 **cURL:**
 ```bash
-curl -X GET "http://localhost:8080/api/groups/healthcheck?groupName=Auth%20системы"
+curl -X GET "http://localhost:8085/api/groups/healthcheck?groupName=Auth%20системы"
 ```
 
 **PowerShell:**
 ```powershell
 $groupName = "Auth системы"
-$uri = "http://localhost:8080/api/groups/healthcheck?groupName=$([System.Web.HttpUtility]::UrlEncode($groupName))"
+$uri = "http://localhost:8085/api/groups/healthcheck?groupName=$([System.Web.HttpUtility]::UrlEncode($groupName))"
 Invoke-RestMethod -Uri $uri -Method Get
 ```
 
@@ -124,13 +126,13 @@ $body = @{
     }
 } | ConvertTo-Json -Depth 10
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/configs/checkUpdate" `
+Invoke-RestMethod -Uri "http://localhost:8085/api/configs/checkUpdate" `
     -Method Post -ContentType "application/json" -Body $body
 ```
 
 **cURL:**
 ```bash
-curl -X POST http://localhost:8080/api/configs/checkUpdate \
+curl -X POST http://localhost:8085/api/configs/checkUpdate \
   -H "Content-Type: application/json" \
   -d '{"SystemName":"auth-mock","version":"v1","config":{"delays":{"loginDelayMs":"1000"},"stringParams":{"mode":"normal"},"loggingLv":"ERROR"}}'
 ```
@@ -161,13 +163,13 @@ $body = @{
     }
 } | ConvertTo-Json -Depth 10
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/configs" `
+Invoke-RestMethod -Uri "http://localhost:8085/api/configs" `
     -Method Post -ContentType "application/json" -Body $body
 ```
 
 **cURL:**
 ```bash
-curl -X POST http://localhost:8080/api/configs \
+curl -X POST http://localhost:8085/api/configs \
   -H "Content-Type: application/json" \
   -d '{"SystemName":"auth-mock","config":{"delays":{"loginDelayMs":"1000"},"stringParams":{"mode":"normal"},"loggingLv":"ERROR"}}'
 ```
@@ -190,12 +192,12 @@ GET /api/configs/{systemName}?version=v1
 
 **cURL (текущая версия):**
 ```bash
-curl -X GET http://localhost:8080/api/configs/auth-mock
+curl -X GET http://localhost:8085/api/configs/auth-mock
 ```
 
 **cURL (конкретная версия):**
 ```bash
-curl -X GET "http://localhost:8080/api/configs/auth-mock?version=v1"
+curl -X GET "http://localhost:8085/api/configs/auth-mock?version=v1"
 ```
 
 **Ответ:**
@@ -226,7 +228,7 @@ POST /api/configs/schedule
 
 **cURL:**
 ```bash
-curl -X POST http://localhost:8080/api/configs/schedule \
+curl -X POST http://localhost:8085/api/configs/schedule \
   -H "Content-Type: application/json" \
   -d '{"SystemName":"auth-mock","scheduledTime":"14:30:00 25-12-2024","config":{"delays":{"loginDelayMs":"2000"},"stringParams":{"mode":"test"},"loggingLv":"INFO"},"comment":"Увеличение задержек"}'
 ```
@@ -250,7 +252,7 @@ GET /api/configs/{systemName}/scheduled
 
 **cURL:**
 ```bash
-curl -X GET http://localhost:8080/api/configs/auth-mock/scheduled
+curl -X GET http://localhost:8085/api/configs/auth-mock/scheduled
 ```
 
 **Ответ:**
@@ -275,7 +277,7 @@ DELETE /api/configs/scheduled/{updateId}
 
 **cURL:**
 ```bash
-curl -X DELETE http://localhost:8080/api/configs/scheduled/550e8400-e29b-41d4-a716-446655440000
+curl -X DELETE http://localhost:8085/api/configs/scheduled/550e8400-e29b-41d4-a716-446655440000
 ```
 
 **Ответ:**
@@ -292,12 +294,12 @@ curl -X DELETE http://localhost:8080/api/configs/scheduled/550e8400-e29b-41d4-a7
 
 ## Веб-интерфейс
 
-- **Главная:** `http://localhost:8080`
-- **Конфиг:** `http://localhost:8080/configs/{systemName}`
-- **Группы:** `http://localhost:8080/groups`
-- **Создать группу:** `http://localhost:8080/groups/new`
-- **Редактировать группу:** `http://localhost:8080/groups/{id}/edit`
-- **Статусы:** `http://localhost:8080/status`
+- **Главная:** `http://localhost:8085`
+- **Конфиг:** `http://localhost:8085/configs/{systemName}`
+- **Группы:** `http://localhost:8085/groups`
+- **Создать группу:** `http://localhost:8085/groups/new`
+- **Редактировать группу:** `http://localhost:8085/groups/{id}/edit`
+- **Статусы:** `http://localhost:8085/status`
 
 ---
 
@@ -354,7 +356,7 @@ $body = @{
     description = "Шаблон для тестирования"
 } | ConvertTo-Json -Depth 10
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/templates" `
+Invoke-RestMethod -Uri "http://localhost:8085/api/templates" `
     -Method Post -ContentType "application/json" -Body $body
 ```
 
@@ -370,7 +372,7 @@ DELETE /api/templates/{id}
 
 **cURL:**
 ```bash
-curl -X DELETE http://localhost:8080/api/templates/550e8400-e29b-41d4-a716-446655440000
+curl -X DELETE http://localhost:8085/api/templates/550e8400-e29b-41d4-a716-446655440000
 ```
 
 ---
@@ -394,7 +396,7 @@ $body = @{
     )
 } | ConvertTo-Json -Depth 10
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/scenarios" `
+Invoke-RestMethod -Uri "http://localhost:8085/api/scenarios" `
     -Method Post -ContentType "application/json" -Body $body
 ```
 
@@ -416,14 +418,14 @@ $group = "550e8400-e29b-41d4-a716-446655440000"
 $name = "Сценарий теста"
 $startTime = "14:30:00 25-12-2024"
 
-$uri = "http://localhost:8080/api/scenarios/execute?group=$([System.Web.HttpUtility]::UrlEncode($group))&name=$([System.Web.HttpUtility]::UrlEncode($name))&startTime=$([System.Web.HttpUtility]::UrlEncode($startTime))"
+$uri = "http://localhost:8085/api/scenarios/execute?group=$([System.Web.HttpUtility]::UrlEncode($group))&name=$([System.Web.HttpUtility]::UrlEncode($name))&startTime=$([System.Web.HttpUtility]::UrlEncode($startTime))"
 
 Invoke-RestMethod -Uri $uri -Method Get
 ```
 
 **cURL:**
 ```bash
-curl -X GET "http://localhost:8080/api/scenarios/execute?group=550e8400-e29b-41d4-a716-446655440000&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
+curl -X GET "http://localhost:8085/api/scenarios/execute?group=550e8400-e29b-41d4-a716-446655440000&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
 ```
 
 ### Обновление сценария
@@ -438,7 +440,7 @@ DELETE /api/scenarios/{id}
 
 **cURL:**
 ```bash
-curl -X DELETE http://localhost:8080/api/scenarios/660e8400-e29b-41d4-a716-446655440001
+curl -X DELETE http://localhost:8085/api/scenarios/660e8400-e29b-41d4-a716-446655440001
 ```
 
 ---
@@ -463,7 +465,7 @@ $body = @{
     systemNames = @("auth", "oauth")
 } | ConvertTo-Json -Depth 10
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/groups" `
+Invoke-RestMethod -Uri "http://localhost:8085/api/groups" `
     -Method Post -ContentType "application/json" -Body $body
 ```
 
@@ -484,20 +486,20 @@ DELETE /api/groups/{id}
 
 **cURL:**
 ```bash
-curl -X DELETE http://localhost:8080/api/groups/550e8400-e29b-41d4-a716-446655440000
+curl -X DELETE http://localhost:8085/api/groups/550e8400-e29b-41d4-a716-446655440000
 ```
 
 ---
 
 ## Веб-интерфейс
 
-- **Главная:** `http://localhost:8080`
-- **Конфиг:** `http://localhost:8080/configs/{systemName}`
-- **Шаблоны:** `http://localhost:8080/templates`
-- **Сценарии:** `http://localhost:8080/scenarios`
-- **Группы:** `http://localhost:8080/groups`
-- **Статусы:** `http://localhost:8080/status` - страница статусов заглушек с группировкой по группам
-- **Статус системы:** `http://localhost:8080/status/{systemName}` - детальная информация по инстансам системы
+- **Главная:** `http://localhost:8085`
+- **Конфиг:** `http://localhost:8085/configs/{systemName}`
+- **Шаблоны:** `http://localhost:8085/templates`
+- **Сценарии:** `http://localhost:8085/scenarios`
+- **Группы:** `http://localhost:8085/groups`
+- **Статусы:** `http://localhost:8085/status` - страница статусов заглушек с группировкой по группам
+- **Статус системы:** `http://localhost:8085/status/{systemName}` - детальная информация по инстансам системы
 
 ---
 
@@ -505,4 +507,5 @@ curl -X DELETE http://localhost:8080/api/groups/550e8400-e29b-41d4-a716-44665544
 
 Пример реализации заглушки с полной интеграцией к MockController:
 - [MocConnectToMockController](https://github.com/Diavolos88/MocConnectToMockController) - библиотека для подключения Spring Boot заглушек к MockController
+
 

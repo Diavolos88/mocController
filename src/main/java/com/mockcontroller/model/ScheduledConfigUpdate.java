@@ -11,6 +11,8 @@ public class ScheduledConfigUpdate {
     private LocalDateTime scheduledTime;
     private LocalDateTime createdAt;
     private String comment;
+    private Boolean applied;
+    private LocalDateTime appliedAt;
 
     public ScheduledConfigUpdate() {
     }
@@ -78,6 +80,22 @@ public class ScheduledConfigUpdate {
 
     public void setComment(String comment) {
         this.comment = comment;
+    }
+
+    public Boolean getApplied() {
+        return applied != null ? applied : false;
+    }
+
+    public void setApplied(Boolean applied) {
+        this.applied = applied != null ? applied : false;
+    }
+
+    public LocalDateTime getAppliedAt() {
+        return appliedAt;
+    }
+
+    public void setAppliedAt(LocalDateTime appliedAt) {
+        this.appliedAt = appliedAt;
     }
 }
 

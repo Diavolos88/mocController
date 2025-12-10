@@ -27,6 +27,8 @@ public class ScheduledConfigMapper {
         entity.setScheduledTime(update.getScheduledTime());
         entity.setCreatedAt(update.getCreatedAt());
         entity.setComment(update.getComment());
+        entity.setApplied(update.getApplied());
+        entity.setAppliedAt(update.getAppliedAt());
         return entity;
     }
 
@@ -41,6 +43,8 @@ public class ScheduledConfigMapper {
         update.setScheduledTime(entity.getScheduledTime());
         update.setCreatedAt(entity.getCreatedAt());
         update.setComment(entity.getComment());
+        update.setApplied(entity.getApplied());
+        update.setAppliedAt(entity.getAppliedAt());
         return update;
     }
 

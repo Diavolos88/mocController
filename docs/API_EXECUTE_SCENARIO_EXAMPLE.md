@@ -18,7 +18,7 @@ GET /api/scenarios/execute
 
 **cURL:**
 ```bash
-curl -X GET "http://localhost:8080/api/scenarios/execute?group=550e8400-e29b-41d4-a716-446655440000&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
+curl -X GET "${API_BASE_URL:-http://localhost:8085}/api/scenarios/execute?group=550e8400-e29b-41d4-a716-446655440000&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
 ```
 
 **PowerShell:**
@@ -27,7 +27,7 @@ $group = "550e8400-e29b-41d4-a716-446655440000"
 $name = "Сценарий теста"
 $startTime = "14:30:00 25-12-2024"
 
-$uri = "http://localhost:8080/api/scenarios/execute?group=$([System.Web.HttpUtility]::UrlEncode($group))&name=$([System.Web.HttpUtility]::UrlEncode($name))&startTime=$([System.Web.HttpUtility]::UrlEncode($startTime))"
+$baseUrl = $env:API_BASE_URL; if (-not $baseUrl) { $baseUrl = "http://localhost:8085" }; $uri = "$baseUrl/api/scenarios/execute?group=$([System.Web.HttpUtility]::UrlEncode($group))&name=$([System.Web.HttpUtility]::UrlEncode($name))&startTime=$([System.Web.HttpUtility]::UrlEncode($startTime))"
 
 Invoke-RestMethod -Uri $uri -Method Get
 ```
@@ -35,14 +35,14 @@ Invoke-RestMethod -Uri $uri -Method Get
 **HTTP:**
 ```http
 GET /api/scenarios/execute?group=550e8400-e29b-41d4-a716-446655440000&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024 HTTP/1.1
-Host: localhost:8080
+Host: localhost:8085
 ```
 
 ### 2. Использование названия группы
 
 **cURL:**
 ```bash
-curl -X GET "http://localhost:8080/api/scenarios/execute?group=Auth%20системы&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
+curl -X GET "${API_BASE_URL:-http://localhost:8085}/api/scenarios/execute?group=Auth%20системы&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
 ```
 
 **PowerShell:**
@@ -51,7 +51,7 @@ $group = "Auth системы"
 $name = "Сценарий теста"
 $startTime = "14:30:00 25-12-2024"
 
-$uri = "http://localhost:8080/api/scenarios/execute?group=$([System.Web.HttpUtility]::UrlEncode($group))&name=$([System.Web.HttpUtility]::UrlEncode($name))&startTime=$([System.Web.HttpUtility]::UrlEncode($startTime))"
+$baseUrl = $env:API_BASE_URL; if (-not $baseUrl) { $baseUrl = "http://localhost:8085" }; $uri = "$baseUrl/api/scenarios/execute?group=$([System.Web.HttpUtility]::UrlEncode($group))&name=$([System.Web.HttpUtility]::UrlEncode($name))&startTime=$([System.Web.HttpUtility]::UrlEncode($startTime))"
 
 Invoke-RestMethod -Uri $uri -Method Get
 ```
@@ -97,8 +97,10 @@ Content-Type: text/plain
 Перед использованием эндпоинта можно получить список всех групп:
 
 ```bash
-curl -X GET http://localhost:8080/api/groups
+curl -X GET ${API_BASE_URL:-http://localhost:8085}/api/groups
 ```
+
+**Примечание:** Замените `localhost:8085` на ваш базовый URL из `app.api.base-url` в `application.yml` или переменную окружения `API_BASE_URL`.
 
 Ответ:
 ```json
@@ -123,4 +125,5 @@ curl -X GET http://localhost:8080/api/groups
 4. Если у шага указан `scheduledTime` - извлекается относительное время (HH:mm) и вычисляется как `startTime + относительное время`
 5. Если у шага указан `delayMs` - вычисляется как `startTime + delayMs`
 6. Если вычисленное время шага оказывается в прошлом, оно автоматически устанавливается на 1 секунду в будущем
+
 

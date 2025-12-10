@@ -16,9 +16,8 @@ public interface ScheduledConfigUpdateRepository extends JpaRepository<Scheduled
     
     boolean existsBySystemName(String systemName);
     
-    // Находим обновления, которые должны быть применены (время наступило или прошло)
-    // Используем <= для того, чтобы захватить обновления, которые уже должны были быть применены
-    @Query("SELECT s FROM ScheduledConfigUpdateEntity s WHERE s.scheduledTime <= :now ORDER BY s.scheduledTime ASC")
+    // Находим обновления, которые должны быть применены (время наступило или прошло) и еще не применены
+    @Query("SELECT s FROM ScheduledConfigUpdateEntity s WHERE s.scheduledTime <= :now AND (s.applied = false OR s.applied IS NULL) ORDER BY s.scheduledTime ASC")
     List<ScheduledConfigUpdateEntity> findDueUpdates(LocalDateTime now);
     
     @Modifying
@@ -26,9 +25,15 @@ public interface ScheduledConfigUpdateRepository extends JpaRepository<Scheduled
     void deleteBySystemName(String systemName);
     
     /**
-     * Находит запланированные обновления для указанной системы и времени
+     * Находит запланированные обновления для указанной системы и времени (только не примененные)
      */
-    @Query("SELECT s FROM ScheduledConfigUpdateEntity s WHERE s.systemName = :systemName AND s.scheduledTime = :scheduledTime ORDER BY s.createdAt ASC")
+    @Query("SELECT s FROM ScheduledConfigUpdateEntity s WHERE s.systemName = :systemName AND s.scheduledTime = :scheduledTime AND (s.applied = false OR s.applied IS NULL) ORDER BY s.createdAt ASC")
     List<ScheduledConfigUpdateEntity> findBySystemNameAndScheduledTime(String systemName, LocalDateTime scheduledTime);
+    
+    /**
+     * Получает все обновления, отсортированные по времени (для истории)
+     */
+    @Query("SELECT s FROM ScheduledConfigUpdateEntity s WHERE s.comment LIKE 'Сценарий:%' ORDER BY s.scheduledTime ASC")
+    List<ScheduledConfigUpdateEntity> findAllScenarioUpdates();
 }
 

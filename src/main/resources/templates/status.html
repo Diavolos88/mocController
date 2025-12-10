@@ -48,10 +48,11 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            margin-left: 32px;
         }
         .nav-link.secondary {
-            padding: 8px 16px;
-            font-size: 13px;
+            padding: 6px 14px;
+            font-size: 12px;
             min-width: auto;
         }
         .nav-link {
@@ -128,6 +129,19 @@
         .nav-link.scenario.active {
             background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
             box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+        }
+        .nav-link.history {
+            background: linear-gradient(135deg, #607d8b 0%, #455a64 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(96, 125, 139, 0.2);
+        }
+        .nav-link.history:hover {
+            background: linear-gradient(135deg, #546e7a 0%, #37474f 100%);
+            box-shadow: 0 4px 12px rgba(96, 125, 139, 0.3);
+        }
+        .nav-link.history.active {
+            background: linear-gradient(135deg, #546e7a 0%, #37474f 100%);
+            box-shadow: 0 4px 12px rgba(96, 125, 139, 0.4);
         }
         .nav-link.groups {
             background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
@@ -549,6 +563,7 @@
             <a href="/scenarios" class="nav-link scenario">Сценарии</a>
         </div>
         <div class="nav-links-right">
+            <a href="/history" class="nav-link history secondary">История</a>
             <a href="/groups" class="nav-link groups secondary">Группы</a>
             <a href="/status" class="nav-link status secondary active">Статусы</a>
             <a th:if="${faqUrl != null && !faqUrl.isEmpty()}" th:href="${faqUrl}" target="_blank" class="nav-link faq secondary">FAQ</a>

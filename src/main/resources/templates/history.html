@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>История сценариев</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
+    <script th:src="@{/js/theme.js}"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+            margin: 0;
+            padding: 40px 20px;
+            padding-top: 120px;
+            background-color: #f5f5f5;
+        }
+        .fixed-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 16px 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .fixed-nav .nav-links {
+            display: flex;
+            gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .nav-links-main {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex: 1;
+            justify-content: center;
+        }
+        .nav-links-right {
+            position: absolute;
+            right: 0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-left: 32px;
+        }
+        .nav-link.secondary {
+            padding: 6px 14px;
+            font-size: 12px;
+            min-width: auto;
+        }
+        .nav-link {
+            padding: 14px 28px;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 140px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #1d72b8 0%, #155a94 100%);
+            color: white;
+        }
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .nav-link.history {
+            background: linear-gradient(135deg, #607d8b 0%, #455a64 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(96, 125, 139, 0.2);
+        }
+        .nav-link.history:hover {
+            background: linear-gradient(135deg, #546e7a 0%, #37474f 100%);
+            box-shadow: 0 4px 12px rgba(96, 125, 139, 0.3);
+        }
+        .nav-link.history.active {
+            background: linear-gradient(135deg, #546e7a 0%, #37474f 100%);
+            box-shadow: 0 4px 12px rgba(96, 125, 139, 0.4);
+        }
+        .nav-link.template {
+            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(156, 39, 176, 0.2);
+        }
+        .nav-link.template:hover {
+            background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+        }
+        .nav-link.template.active {
+            background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.4);
+        }
+        .nav-link.scenario {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(255, 152, 0, 0.2);
+        }
+        .nav-link.scenario:hover {
+            background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+        }
+        .nav-link.scenario.active {
+            background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+        }
+        .nav-link.groups {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+        }
+        .nav-link.groups:hover {
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+        .nav-link.groups.active {
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+        }
+        .nav-link.status {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+        }
+        .nav-link.status:hover {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        .nav-link.status.active {
+            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+        .nav-link.faq {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(244, 67, 54, 0.2);
+        }
+        .nav-link.faq:hover {
+            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+        .nav-link.faq.active {
+            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .group-section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .group-header {
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .group-name {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin: 0 0 8px 0;
+        }
+        .group-description {
+            color: #666;
+            margin: 0;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin: 24px 0 16px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .update-card {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .update-info {
+            flex: 1;
+        }
+        .update-time {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1976d2;
+            margin-bottom: 8px;
+        }
+        .update-scenario {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .update-step-comment {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+        .update-system {
+            font-size: 13px;
+            color: #999;
+            margin-top: 8px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .group-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .group-tab {
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #90caf9 0%, #64b5f6 100%);
+            color: #0d47a1;
+            font-weight: 600;
+            border: 2px solid #42a5f5;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+            position: relative;
+        }
+        .group-tab:hover {
+            background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
+            color: #0d47a1;
+            border-color: #2196f3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+        }
+        .group-tab.active {
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+            color: white;
+            border-color: #0d47a1;
+            box-shadow: 0 4px 12px rgba(21, 101, 192, 0.5);
+            font-weight: 700;
+        }
+        .group-tab.active:hover {
+            background: linear-gradient(135deg, #0d47a1 0%, #0a3d7a 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(21, 101, 192, 0.6);
+        }
+        .group-tab-count {
+            margin-left: 8px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+            min-width: 20px;
+            text-align: center;
+        }
+        .group-tab:not(.active) .group-tab-count {
+            background: rgba(13, 71, 161, 0.2);
+            color: #0d47a1;
+        }
+        .group-tab.active .group-tab-count {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        body.dark-theme .group-tab:not(.active) .group-tab-count {
+            background: rgba(224, 224, 224, 0.2);
+            color: #e0e0e0;
+        }
+        body.dark-theme .group-tab.active .group-tab-count {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        body.dark-theme {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        body.dark-theme .group-section {
+            background: #2d2d2d;
+            border-color: #404040;
+        }
+        body.dark-theme .group-name {
+            color: #e0e0e0;
+        }
+        body.dark-theme .group-description {
+            color: #b0b0b0;
+        }
+        body.dark-theme .group-tab {
+            background: linear-gradient(135deg, #424242 0%, #616161 100%);
+            color: #e0e0e0;
+            border-color: #757575;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        body.dark-theme .group-tab:hover {
+            background: linear-gradient(135deg, #616161 0%, #757575 100%);
+            color: #ffffff;
+            border-color: #9e9e9e;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+        body.dark-theme .group-tab.active {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            color: white;
+            border-color: #0d47a1;
+            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.6);
+        }
+        body.dark-theme .group-tab.active:hover {
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+            box-shadow: 0 6px 16px rgba(25, 118, 210, 0.7);
+        }
+        body.dark-theme .section-title {
+            color: #e0e0e0;
+            border-color: #404040;
+        }
+        body.dark-theme .update-card {
+            background: #252525;
+            border-color: #404040;
+        }
+        body.dark-theme .update-time {
+            color: #64b5f6;
+        }
+        body.dark-theme .update-scenario {
+            color: #e0e0e0;
+        }
+        body.dark-theme .update-step-comment {
+            color: #b0b0b0;
+        }
+        body.dark-theme .update-system {
+            color: #808080;
+        }
+        .group-tab-count {
+            margin-left: 8px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+            min-width: 20px;
+            text-align: center;
+        }
+        .group-tab:not(.active) .group-tab-count {
+            background: rgba(13, 71, 161, 0.25);
+            color: #0d47a1;
+        }
+        .group-tab.active .group-tab-count {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        body.dark-theme .group-tab:not(.active) .group-tab-count {
+            background: rgba(224, 224, 224, 0.2);
+            color: #e0e0e0;
+        }
+        body.dark-theme .group-tab.active .group-tab-count {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-top: 32px;
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .pagination-link {
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+        }
+        .pagination-link:hover {
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+        }
+        .pagination-info {
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        body.dark-theme .pagination {
+            border-top-color: #404040;
+        }
+        body.dark-theme .pagination-info {
+            color: #b0b0b0;
+        }
+    </style>
+</head>
+<body>
+    <div class="fixed-nav">
+        <div class="nav-links">
+            <div class="nav-links-main">
+                <a href="/" class="nav-link mocks">Заглушки</a>
+                <a href="/templates" class="nav-link template">Шаблоны</a>
+                <a href="/scenarios" class="nav-link scenario">Сценарии</a>
+            </div>
+            <div class="nav-links-right">
+                <a href="/history" class="nav-link history secondary active">История</a>
+                <a href="/groups" class="nav-link groups secondary">Группы</a>
+                <a href="/status" class="nav-link status secondary">Статусы</a>
+                <a th:if="${faqUrl != null && !faqUrl.isEmpty()}" th:href="${faqUrl}" target="_blank" class="nav-link faq secondary">FAQ</a>
+                <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>История сценариев</h1>
+        
+        <div th:if="${groupTabs != null && !groupTabs.isEmpty()}" class="group-tabs">
+            <a th:href="@{/history(groupId='all')}" 
+               th:class="${currentGroup == null || currentGroup == 'all' ? 'group-tab active' : 'group-tab'}">
+                Все группы
+            </a>
+            <a th:each="tab : ${groupTabs}"
+               th:href="@{/history(groupId=${tab.id})}"
+               th:class="${currentGroup == tab.id ? 'group-tab active' : 'group-tab'}">
+                <span th:text="${tab.name}">Группа</span>
+                <span th:if="${tab.count > 0}" class="group-tab-count" th:text="${tab.count}">0</span>
+            </a>
+        </div>
+        
+        <div th:if="${historyGroups == null || historyGroups.isEmpty()}" class="empty-state">
+            <p>Нет истории выполнения сценариев</p>
+        </div>
+        
+        <div th:each="group : ${historyGroups}" class="group-section">
+            <div class="group-header">
+                <h2 class="group-name" th:text="${group.groupName}">Название группы</h2>
+                <p th:if="${group.groupDescription != null && !group.groupDescription.isEmpty()}" 
+                   class="group-description" 
+                   th:text="${group.groupDescription}">Описание группы</p>
+            </div>
+            
+            <div th:if="${!group.scheduled.isEmpty()}">
+                <h3 class="section-title">Запланированные</h3>
+                <div th:each="info : ${group.scheduled}" class="update-card">
+                    <div class="update-info">
+                        <div class="update-time">
+                            <span th:text="${formattedTimes != null && formattedTimes.containsKey(info.update.id) ? formattedTimes.get(info.update.id) : (info.update.scheduledTime != null ? #temporals.format(info.update.scheduledTime, 'HH:mm:ss dd-MM-yyyy') : 'N/A')}">Время</span>
+                        </div>
+                        <div class="update-scenario">
+                            <strong>Сценарий:</strong> <span th:text="${info.scenarioName}">Название</span>
+                        </div>
+                        <div th:if="${info.stepComment != null && !info.stepComment.isEmpty()}" class="update-step-comment">
+                            <strong>Комментарий ступени:</strong> <span th:text="${info.stepComment}">Комментарий</span>
+                        </div>
+                        <div class="update-system">
+                            Система: <span th:text="${info.update.systemName}">system-name</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div th:if="${!group.completed.isEmpty()}">
+                <h3 class="section-title">Выполненные</h3>
+                <div th:each="info : ${group.completed}" class="update-card">
+                    <div class="update-info">
+                        <div class="update-time">
+                            <span th:text="${formattedTimes != null && formattedTimes.containsKey(info.update.id) ? formattedTimes.get(info.update.id) : (info.update.scheduledTime != null ? #temporals.format(info.update.scheduledTime, 'HH:mm:ss dd-MM-yyyy') : 'N/A')}">Время</span>
+                        </div>
+                        <div class="update-scenario">
+                            <strong>Сценарий:</strong> <span th:text="${info.scenarioName}">Название</span>
+                        </div>
+                        <div th:if="${info.stepComment != null && !info.stepComment.isEmpty()}" class="update-step-comment">
+                            <strong>Комментарий ступени:</strong> <span th:text="${info.stepComment}">Комментарий</span>
+                        </div>
+                        <div class="update-system">
+                            Система: <span th:text="${info.update.systemName}">system-name</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div th:if="${group.scheduled.isEmpty() && group.completed.isEmpty()}" class="empty-state">
+                <p>Нет записей для этой группы</p>
+            </div>
+        </div>
+        
+        <!-- Пагинация -->
+        <div th:if="${totalPages != null && totalPages > 1}" class="pagination">
+            <a th:if="${currentPage != null && currentPage > 1}" 
+               th:href="@{/history(groupId=${currentGroup != null ? currentGroup : 'all'}, page=${currentPage - 1})}"
+               class="pagination-link">← Назад</a>
+            
+            <span class="pagination-info">
+                Страница <span th:text="${currentPage != null ? currentPage : 1}">1</span> из <span th:text="${totalPages != null ? totalPages : 1}">1</span>
+                (<span th:text="${totalItems != null ? totalItems : 0}">0</span> записей)
+            </span>
+            
+            <a th:if="${currentPage != null && totalPages != null && currentPage < totalPages}" 
+               th:href="@{/history(groupId=${currentGroup != null ? currentGroup : 'all'}, page=${currentPage + 1})}"
+               class="pagination-link">Вперед →</a>
+        </div>
+    </div>
+</body>
+</html>
+

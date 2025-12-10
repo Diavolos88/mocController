@@ -27,6 +27,12 @@ public class ScheduledConfigUpdateEntity {
     @Column(name = "comment", length = 500)
     private String comment;
 
+    @Column(name = "applied", nullable = false)
+    private Boolean applied = false;
+
+    @Column(name = "applied_at")
+    private LocalDateTime appliedAt;
+
     @PrePersist
     protected void onCreate() {
         if (id == null || id.isEmpty()) {
@@ -46,6 +52,7 @@ public class ScheduledConfigUpdateEntity {
         this.newConfigJson = newConfigJson;
         this.scheduledTime = scheduledTime;
         this.createdAt = LocalDateTime.now();
+        this.applied = false;
     }
 
     public ScheduledConfigUpdateEntity(String systemName, String newConfigJson, LocalDateTime scheduledTime, String comment) {
@@ -55,6 +62,7 @@ public class ScheduledConfigUpdateEntity {
         this.scheduledTime = scheduledTime;
         this.createdAt = LocalDateTime.now();
         this.comment = comment;
+        this.applied = false;
     }
 
     public String getId() {
@@ -103,6 +111,22 @@ public class ScheduledConfigUpdateEntity {
 
     public void setComment(String comment) {
         this.comment = comment;
+    }
+
+    public Boolean getApplied() {
+        return applied != null ? applied : false;
+    }
+
+    public void setApplied(Boolean applied) {
+        this.applied = applied != null ? applied : false;
+    }
+
+    public LocalDateTime getAppliedAt() {
+        return appliedAt;
+    }
+
+    public void setAppliedAt(LocalDateTime appliedAt) {
+        this.appliedAt = appliedAt;
     }
 }
 

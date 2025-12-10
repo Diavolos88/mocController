@@ -52,19 +52,28 @@ public class ScheduledConfigService {
         String safeSystemName = SystemNameUtils.sanitize(systemName != null ? systemName : "");
         String newConfigJson = jsonToString(newConfig);
         
-        // Проверяем на дубликаты: ищем существующие обновления для той же системы и времени
+        // Проверяем на дубликаты: ищем существующие не примененные обновления для той же системы и времени
         List<ScheduledConfigUpdateEntity> existingUpdates = repository.findBySystemNameAndScheduledTime(safeSystemName, scheduledTime);
         
         for (ScheduledConfigUpdateEntity existing : existingUpdates) {
+            // Пропускаем уже примененные обновления
+            Boolean existingApplied = existing.getApplied();
+            if (existingApplied != null && existingApplied) {
+                continue;
+            }
+            
             // Сравниваем JSON конфиги (нормализуем для корректного сравнения)
             if (jsonConfigsEqual(existing.getNewConfigJson(), newConfigJson)) {
-                // Найден дубликат - обновляем комментарий существующего и удаляем остальные дубликаты
+                // Найден дубликат - обновляем комментарий существующего и удаляем остальные не примененные дубликаты
                 String mergedComment = mergeComments(existing.getComment(), comment);
                 existing.setComment(mergedComment);
                 
-                // Удаляем все остальные дубликаты с таким же конфигом и временем
+                // Удаляем все остальные не примененные дубликаты с таким же конфигом и временем
                 for (ScheduledConfigUpdateEntity duplicate : existingUpdates) {
+                    Boolean duplicateApplied = duplicate.getApplied();
+                    boolean isDuplicateNotApplied = duplicateApplied == null || !duplicateApplied;
                     if (!duplicate.getId().equals(existing.getId()) && 
+                        isDuplicateNotApplied &&
                         jsonConfigsEqual(duplicate.getNewConfigJson(), newConfigJson)) {
                         repository.deleteById(duplicate.getId());
                         logger.debug("Removed duplicate scheduled update {} for {} at {}", 
@@ -156,7 +165,14 @@ public class ScheduledConfigService {
         }
         // Используем санитизированное имя для консистентности
         String safeSystemName = SystemNameUtils.sanitize(systemName);
-        return repository.existsBySystemName(safeSystemName);
+        LocalDateTime now = LocalDateTime.now();
+        // Проверяем только не примененные будущие обновления
+        return repository.findBySystemNameOrderByScheduledTimeAsc(safeSystemName).stream()
+                .anyMatch(entity -> {
+                    Boolean applied = entity.getApplied();
+                    boolean isNotApplied = applied == null || !applied;
+                    return isNotApplied && entity.getScheduledTime() != null && entity.getScheduledTime().isAfter(now);
+                });
     }
 
     public List<ScheduledConfigUpdate> getScheduledUpdates(String systemName) {
@@ -166,9 +182,13 @@ public class ScheduledConfigService {
         // Используем санитизированное имя для консистентности
         String safeSystemName = SystemNameUtils.sanitize(systemName);
         LocalDateTime now = LocalDateTime.now();
-        // Возвращаем только будущие обновления (которые еще не наступили)
+        // Возвращаем только будущие обновления (которые еще не наступили) и не примененные
         return repository.findBySystemNameOrderByScheduledTimeAsc(safeSystemName).stream()
-                .filter(entity -> entity.getScheduledTime() != null && entity.getScheduledTime().isAfter(now))
+                .filter(entity -> {
+                    Boolean applied = entity.getApplied();
+                    boolean isNotApplied = applied == null || !applied;
+                    return isNotApplied && entity.getScheduledTime() != null && entity.getScheduledTime().isAfter(now);
+                })
                 .map(mapper::toModel)
                 .collect(Collectors.toList());
     }
@@ -182,7 +202,17 @@ public class ScheduledConfigService {
     @Transactional
     public void cancelScheduledUpdate(String updateId) {
         if (updateId != null && repository.existsById(updateId)) {
-            repository.deleteById(updateId);
+            ScheduledConfigUpdateEntity entity = repository.findById(updateId).orElse(null);
+            if (entity != null) {
+                // Не удаляем уже примененные обновления - они остаются для истории
+                Boolean applied = entity.getApplied();
+                if (applied != null && applied) {
+                    logger.info("Cannot cancel already applied scheduled update {}", updateId);
+                    return;
+                }
+                repository.deleteById(updateId);
+                logger.info("Cancelled scheduled update {}", updateId);
+            }
         }
     }
 
@@ -234,10 +264,12 @@ public class ScheduledConfigService {
                 if (newConfig == null) {
                     logger.warn("Skipping scheduled update {} for {}: newConfig is null", 
                         update.getId(), systemName);
-                    // Удаляем все обновления для этой системы и времени, даже с null конфигом
+                    // Помечаем все обновления для этой системы и времени как примененные (не удаляем для истории)
                     for (ScheduledConfigUpdateEntity e : updates) {
                         if (e.getId() != null) {
-                            repository.deleteById(e.getId());
+                            e.setApplied(true);
+                            e.setAppliedAt(now);
+                            repository.save(e);
                         }
                     }
                     continue;
@@ -248,10 +280,13 @@ public class ScheduledConfigService {
                     systemName, now, entity.getScheduledTime(), commentInfo);
                 configService.updateCurrentConfig(systemName, newConfig);
                 
-                // Удаляем все обновления для этой системы и времени после успешного применения
+                // Помечаем все обновления для этой системы и времени как примененные (не удаляем для истории)
                 for (ScheduledConfigUpdateEntity e : updates) {
                     if (e.getId() != null) {
-                        repository.deleteById(e.getId());
+                        e.setApplied(true);
+                        e.setAppliedAt(now);
+                        repository.save(e);
+                        logger.debug("Marked scheduled update {} as applied", e.getId());
                     }
                 }
             } catch (Exception e) {
@@ -265,10 +300,19 @@ public class ScheduledConfigService {
 
     @Transactional
     public void deleteAllBySystemName(String systemName) {
-        if (systemName != null && !systemName.trim().isEmpty()) {
-            // Используем санитизированное имя для консистентности
-            String safeSystemName = SystemNameUtils.sanitize(systemName);
-            repository.deleteBySystemName(safeSystemName);
+        if (systemName == null || systemName.trim().isEmpty()) {
+            return;
+        }
+        // Используем санитизированное имя для консистентности
+        String safeSystemName = SystemNameUtils.sanitize(systemName);
+        // Удаляем только не примененные обновления, примененные остаются для истории
+        List<ScheduledConfigUpdateEntity> allUpdates = repository.findBySystemNameOrderByScheduledTimeAsc(safeSystemName);
+        for (ScheduledConfigUpdateEntity entity : allUpdates) {
+            Boolean applied = entity.getApplied();
+            if (applied == null || !applied) {
+                repository.deleteById(entity.getId());
+                logger.debug("Deleted non-applied scheduled update {} for {}", entity.getId(), safeSystemName);
+            }
         }
     }
 
@@ -285,6 +329,15 @@ public class ScheduledConfigService {
 
     public static java.time.format.DateTimeFormatter getDateTimeFormatter() {
         return DateTimeUtils.DATE_TIME_FORMATTER;
+    }
+    
+    /**
+     * Получает все обновления, связанные со сценариями, для истории (включая примененные)
+     */
+    public List<ScheduledConfigUpdate> getAllScenarioUpdates() {
+        return repository.findAllScenarioUpdates().stream()
+                .map(mapper::toModel)
+                .collect(Collectors.toList());
     }
 }
 

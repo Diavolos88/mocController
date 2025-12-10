@@ -2,8 +2,22 @@
 
 ## Базовый URL
 
+Базовый URL настраивается через параметр `app.api.base-url` в `application.yml` (по умолчанию `http://localhost:8085`).
+
 ```
-http://localhost:8080
+http://localhost:8085
+```
+
+**Настройка через переменную окружения:**
+```bash
+export API_BASE_URL=http://your-host:8085
+```
+
+**Или в application.yml:**
+```yaml
+app:
+  api:
+    base-url: http://your-host:8085
 ```
 
 ## REST API Эндпоинты
@@ -27,18 +41,18 @@ OK
 
 **cURL:**
 ```bash
-curl -X GET http://localhost:8080/service/healthcheck
+curl -X GET http://localhost:8085/service/healthcheck
 ```
 
 **PowerShell:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/service/healthcheck" -Method Get
+Invoke-RestMethod -Uri "http://localhost:8085/service/healthcheck" -Method Get
 ```
 
 **HTTP:**
 ```http
 GET /service/healthcheck HTTP/1.1
-Host: localhost:8080
+Host: localhost:8085
 ```
 
 **Коды ответа:**
@@ -71,18 +85,18 @@ OK
 
 **cURL:**
 ```bash
-curl -X POST "http://localhost:8080/api/healthcheck?systemName=auth-mock&instanceId=instance-1"
+curl -X POST "http://localhost:8085/api/healthcheck?systemName=auth-mock&instanceId=instance-1"
 ```
 
 **PowerShell:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/api/healthcheck?systemName=auth-mock&instanceId=instance-1" -Method Post
+Invoke-RestMethod -Uri "http://localhost:8085/api/healthcheck?systemName=auth-mock&instanceId=instance-1" -Method Post
 ```
 
 **HTTP:**
 ```http
 POST /api/healthcheck?systemName=auth-mock&instanceId=instance-1 HTTP/1.1
-Host: localhost:8080
+Host: localhost:8085
 ```
 
 **Альтернативный эндпоинт:**
@@ -171,20 +185,20 @@ POST /api/healthcheck/{systemName}?instanceId=instance-1
 
 **cURL:**
 ```bash
-curl -X GET "http://localhost:8080/api/groups/healthcheck?groupName=Auth%20системы"
+curl -X GET "http://localhost:8085/api/groups/healthcheck?groupName=Auth%20системы"
 ```
 
 **PowerShell:**
 ```powershell
 $groupName = "Auth системы"
-$uri = "http://localhost:8080/api/groups/healthcheck?groupName=$([System.Web.HttpUtility]::UrlEncode($groupName))"
+$uri = "http://localhost:8085/api/groups/healthcheck?groupName=$([System.Web.HttpUtility]::UrlEncode($groupName))"
 Invoke-RestMethod -Uri $uri -Method Get
 ```
 
 **HTTP:**
 ```http
 GET /api/groups/healthcheck?groupName=Auth%20системы HTTP/1.1
-Host: localhost:8080
+Host: localhost:8085
 ```
 
 **Коды ответа:**
@@ -309,7 +323,7 @@ $body = @{
     }
 } | ConvertTo-Json -Depth 10
 
-$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs/checkUpdate" `
+$response = Invoke-RestMethod -Uri "http://localhost:8085/api/configs/checkUpdate" `
     -Method Post `
     -ContentType "application/json" `
     -Body $body
@@ -319,7 +333,7 @@ $response | ConvertTo-Json
 
 **cURL:**
 ```bash
-curl -X POST http://localhost:8080/api/configs/checkUpdate \
+curl -X POST http://localhost:8085/api/configs/checkUpdate \
   -H "Content-Type: application/json" \
   -d '{
     "SystemName": "auth-mock",
@@ -341,7 +355,7 @@ curl -X POST http://localhost:8080/api/configs/checkUpdate \
 **HTTP:**
 ```http
 POST /api/configs/checkUpdate HTTP/1.1
-Host: localhost:8080
+Host: localhost:8085
 Content-Type: application/json
 
 {
@@ -474,7 +488,7 @@ $body = @{
     }
 } | ConvertTo-Json -Depth 10
 
-$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs" `
+$response = Invoke-RestMethod -Uri "http://localhost:8085/api/configs" `
     -Method Post `
     -ContentType "application/json" `
     -Body $body
@@ -484,7 +498,7 @@ $response | ConvertTo-Json
 
 **cURL:**
 ```bash
-curl -X POST http://localhost:8080/api/configs \
+curl -X POST http://localhost:8085/api/configs \
   -H "Content-Type: application/json" \
   -d '{
     "SystemName": "auth-mock",
@@ -552,24 +566,24 @@ curl -X POST http://localhost:8080/api/configs \
 
 **cURL (текущая версия):**
 ```bash
-curl -X GET http://localhost:8080/api/configs/auth-mock
+curl -X GET http://localhost:8085/api/configs/auth-mock
 ```
 
 **cURL (конкретная версия):**
 ```bash
-curl -X GET "http://localhost:8080/api/configs/auth-mock?version=v1"
+curl -X GET "http://localhost:8085/api/configs/auth-mock?version=v1"
 ```
 
 **PowerShell:**
 ```powershell
 # Текущая версия
-$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs/auth-mock" `
+$response = Invoke-RestMethod -Uri "http://localhost:8085/api/configs/auth-mock" `
     -Method Get
 
 $response | ConvertTo-Json
 
 # Конкретная версия
-$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs/auth-mock?version=v1" `
+$response = Invoke-RestMethod -Uri "http://localhost:8085/api/configs/auth-mock?version=v1" `
     -Method Get
 
 $response | ConvertTo-Json
@@ -646,7 +660,7 @@ $response | ConvertTo-Json
 
 **cURL:**
 ```bash
-curl -X POST http://localhost:8080/api/configs/schedule \
+curl -X POST http://localhost:8085/api/configs/schedule \
   -H "Content-Type: application/json" \
   -d '{
     "SystemName": "auth-mock",
@@ -683,7 +697,7 @@ $body = @{
     comment = "Увеличение задержек"
 } | ConvertTo-Json -Depth 10
 
-$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs/schedule" `
+$response = Invoke-RestMethod -Uri "http://localhost:8085/api/configs/schedule" `
     -Method Post `
     -ContentType "application/json" `
     -Body $body
@@ -742,12 +756,12 @@ $response | ConvertTo-Json
 
 **cURL:**
 ```bash
-curl -X GET http://localhost:8080/api/configs/auth-mock/scheduled
+curl -X GET http://localhost:8085/api/configs/auth-mock/scheduled
 ```
 
 **PowerShell:**
 ```powershell
-$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs/auth-mock/scheduled" `
+$response = Invoke-RestMethod -Uri "http://localhost:8085/api/configs/auth-mock/scheduled" `
     -Method Get
 
 $response | ConvertTo-Json
@@ -789,12 +803,12 @@ $response | ConvertTo-Json
 
 **cURL:**
 ```bash
-curl -X DELETE http://localhost:8080/api/configs/scheduled/550e8400-e29b-41d4-a716-446655440000
+curl -X DELETE http://localhost:8085/api/configs/scheduled/550e8400-e29b-41d4-a716-446655440000
 ```
 
 **PowerShell:**
 ```powershell
-$response = Invoke-RestMethod -Uri "http://localhost:8080/api/configs/scheduled/550e8400-e29b-41d4-a716-446655440000" `
+$response = Invoke-RestMethod -Uri "http://localhost:8085/api/configs/scheduled/550e8400-e29b-41d4-a716-446655440000" `
     -Method Delete
 
 $response | ConvertTo-Json
@@ -832,7 +846,7 @@ $response | ConvertTo-Json
 
 **Пример:**
 ```
-http://localhost:8080/status
+http://localhost:8085/status
 ```
 
 **Детальная страница системы:**
@@ -841,17 +855,22 @@ http://localhost:8080/status
 
 ---
 
-### 2. Главная страница
+### 2. Главная страница (Заглушки)
 
-Отображает список всех зарегистрированных заглушек.
+Отображает список всех зарегистрированных заглушек, сгруппированных по группам.
 
 **Эндпоинт:** `GET /`
 
+**Параметры:**
+- `system` (query, необязательное) - название группы для фильтрации
+
 **Описание:**
-- Показывает все зарегистрированные заглушки, сгруппированные по системам
-- Группирует заглушки по системам (первое слово до дефиса в названии)
-- Показывает счетчик заглушек для каждой системы
-- Позволяет фильтровать по системе через вкладки
+- Показывает все зарегистрированные заглушки, сгруппированные по группам из базы данных
+- Отображает только группы, созданные через интерфейс управления группами
+- Каждая вкладка соответствует группе из базы данных
+- Во вкладке группы отображаются только те заглушки, которые добавлены в эту группу
+- Показывает счетчик заглушек для каждой группы
+- Позволяет фильтровать по группе через вкладки
 - Отображает последнее время обновления для каждой заглушки
 - Каждая заглушка - карточка со ссылкой на страницу редактирования конфига
 - **Удаление конфига:** Кнопка "Удалить" в правом нижнем углу каждой карточки
@@ -859,9 +878,15 @@ http://localhost:8080/status
   - После подтверждения конфиг удаляется безвозвратно
   - Все запланированные обновления для этой системы также удаляются
 
+**Примечания:**
+- Группировка происходит только по группам из базы данных
+- Автоматическая группировка по префиксу имени заглушки отключена
+- Если группа пуста (не содержит заглушек), она не отображается
+- Для отображения заглушек в группе их нужно добавить через интерфейс управления группами
+
 **Пример:**
 ```
-http://localhost:8080
+http://localhost:8085
 ```
 
 ---
@@ -890,7 +915,7 @@ http://localhost:8080
 
 **Пример:**
 ```
-http://localhost:8080/configs/auth-mock
+http://localhost:8085/configs/auth-mock
 ```
 
 ---
@@ -1191,7 +1216,7 @@ POST /api/configs/checkUpdate
 
 ### Сценарий 2: Обновление конфига через UI
 
-1. Открыть страницу конфига: `http://localhost:8080/configs/auth-mock`
+1. Открыть страницу конфига: `http://localhost:8085/configs/auth-mock`
 2. Изменить значения параметров
 3. Нажать "Сохранить изменения"
 4. Версия увеличивается на 1
@@ -1519,7 +1544,7 @@ spring:
 
 **cURL:**
 ```bash
-curl -X GET "http://localhost:8080/api/scenarios/execute?group=550e8400-e29b-41d4-a716-446655440000&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
+curl -X GET "http://localhost:8085/api/scenarios/execute?group=550e8400-e29b-41d4-a716-446655440000&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
 ```
 
 **PowerShell:**
@@ -1528,14 +1553,14 @@ $group = "550e8400-e29b-41d4-a716-446655440000"
 $name = "Сценарий теста"
 $startTime = "14:30:00 25-12-2024"
 
-$uri = "http://localhost:8080/api/scenarios/execute?group=$([System.Web.HttpUtility]::UrlEncode($group))&name=$([System.Web.HttpUtility]::UrlEncode($name))&startTime=$([System.Web.HttpUtility]::UrlEncode($startTime))"
+$uri = "http://localhost:8085/api/scenarios/execute?group=$([System.Web.HttpUtility]::UrlEncode($group))&name=$([System.Web.HttpUtility]::UrlEncode($name))&startTime=$([System.Web.HttpUtility]::UrlEncode($startTime))"
 
 Invoke-RestMethod -Uri $uri -Method Get
 ```
 
 **Пример с названием группы:**
 ```bash
-curl -X GET "http://localhost:8080/api/scenarios/execute?group=Auth%20системы&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
+curl -X GET "http://localhost:8085/api/scenarios/execute?group=Auth%20системы&name=Сценарий%20теста&startTime=14:30:00%2025-12-2024"
 ```
 
 **Примечания:**
@@ -1559,7 +1584,7 @@ curl -X GET "http://localhost:8080/api/scenarios/execute?group=Auth%20систе
 
 **Пример:**
 ```bash
-curl -X DELETE http://localhost:8080/api/scenarios/660e8400-e29b-41d4-a716-446655440001
+curl -X DELETE http://localhost:8085/api/scenarios/660e8400-e29b-41d4-a716-446655440001
 ```
 
 ---
@@ -1577,7 +1602,7 @@ curl -X DELETE http://localhost:8080/api/scenarios/660e8400-e29b-41d4-a716-44665
 
 **Пример:**
 ```bash
-curl -X DELETE http://localhost:8080/api/templates/550e8400-e29b-41d4-a716-446655440000
+curl -X DELETE http://localhost:8085/api/templates/550e8400-e29b-41d4-a716-446655440000
 ```
 
 ---
@@ -1699,8 +1724,10 @@ curl -X DELETE http://localhost:8080/api/templates/550e8400-e29b-41d4-a716-44665
 2. Подтвердите удаление в диалоговом окне
 
 **Примечания:**
-- Группы используются для организации заглушек на странице статусов
-- Системы, не входящие ни в одну группу, отображаются в группе "Без группы"
+- Группы используются для организации заглушек на главной странице и странице статусов
+- На главной странице отображаются только группы из базы данных
+- Во вкладке группы на главной странице показываются только заглушки, добавленные в эту группу
+- Системы, не входящие ни в одну группу, отображаются в группе "Без группы" на странице статусов
 - При редактировании группы можно изменить список систем, добавив или удалив системы из группы
 - Заглушку можно удалить из группы прямо со страницы статусов, нажав кнопку "×" на карточке заглушки
 - Удаление заглушки из группы не удаляет саму заглушку из системы, только убирает её из группы
@@ -1754,6 +1781,34 @@ curl -X DELETE http://localhost:8080/api/templates/550e8400-e29b-41d4-a716-44665
 
 ---
 
+## История выполнения сценариев
+
+Веб-интерфейс для просмотра истории выполнения сценариев доступен по адресу:
+```
+GET /history
+```
+
+**Описание:**
+- Отображает все запланированные и выполненные обновления конфигураций, созданные при выполнении сценариев
+- Группирует записи по группам сценариев
+- Показывает запланированные обновления (от ближайших к дальним)
+- Показывает выполненные обновления (от последних к старым)
+- Поддерживает пагинацию по 10 записей на странице
+- Позволяет фильтровать по группам
+
+**Параметры:**
+- `groupId` (query, необязательное) - ID группы для фильтрации (по умолчанию показываются все группы)
+- `page` (query, необязательное) - номер страницы для пагинации (по умолчанию 1)
+
+**Пример:**
+```
+http://localhost:8085/history
+http://localhost:8085/history?groupId=550e8400-e29b-41d4-a716-446655440000
+http://localhost:8085/history?groupId=550e8400-e29b-41d4-a716-446655440000&page=2
+```
+
+---
+
 ## Конфигурация приложения
 
 Параметры конфигурации приложения настраиваются в файле `application.yml`.
@@ -1796,4 +1851,5 @@ app:
 - Статистика "всего" и "оффлайн" считается только за период, указанный в `stats-window-seconds` (по умолчанию 5 минут)
 - Инстансы, которые не отправляли healthcheck за последние `stats-window-seconds`, не учитываются в статистике
 - Изменения в конфигурации требуют перезапуска приложения
+
 

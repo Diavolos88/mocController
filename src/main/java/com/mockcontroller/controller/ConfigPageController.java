@@ -2,9 +2,11 @@ package com.mockcontroller.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mockcontroller.dto.ConfigViewDto;
+import com.mockcontroller.model.Group;
 import com.mockcontroller.model.StoredConfig;
 import com.mockcontroller.model.Template;
 import com.mockcontroller.service.ConfigService;
+import com.mockcontroller.service.GroupService;
 import com.mockcontroller.service.ScheduledConfigService;
 import com.mockcontroller.service.TemplateService;
 import com.mockcontroller.util.DateTimeUtils;
@@ -22,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,7 @@ public class ConfigPageController {
     private final ConfigService configService;
     private final ScheduledConfigService scheduledConfigService;
     private final TemplateService templateService;
+    private final GroupService groupService;
     
     // Внутренний класс для передачи данных системы
     public static class SystemInfo {
@@ -50,76 +54,94 @@ public class ConfigPageController {
         public boolean isInvalid() { return isInvalid; }
     }
 
-    public ConfigPageController(ConfigService configService, ScheduledConfigService scheduledConfigService, TemplateService templateService) {
+    public ConfigPageController(ConfigService configService, ScheduledConfigService scheduledConfigService, TemplateService templateService, GroupService groupService) {
         this.configService = configService;
         this.scheduledConfigService = scheduledConfigService;
         this.templateService = templateService;
+        this.groupService = groupService;
     }
 
     @GetMapping("/")
     public String landing(@RequestParam(required = false) String system, Model model) {
         List<StoredConfig> allConfigs = new ArrayList<>(configService.findAll());
         
-        // Разделяем на правильные (по шаблону) и неправильные
-        Map<String, List<StoredConfig>> groupedBySystem = new HashMap<>();
-        List<StoredConfig> invalidConfigs = new ArrayList<>();
+        // Получаем все группы
+        Collection<Group> allGroups = groupService.findAll();
         
+        // Создаем карту для быстрого поиска заглушек по имени
+        Map<String, StoredConfig> configsByName = new HashMap<>();
         for (StoredConfig config : allConfigs) {
-            String systemName = config.getSystemName();
-            // Проверяем шаблон: название_системы-название_эмуляции-mock
-            if (SystemNameUtils.isValidTemplate(systemName)) {
-                String systemPrefix = SystemNameUtils.extractSystemPrefix(systemName);
-                groupedBySystem.computeIfAbsent(systemPrefix, k -> new ArrayList<>()).add(config);
-            } else {
-                invalidConfigs.add(config);
+            configsByName.put(config.getSystemName(), config);
+        }
+        
+        // Создаем список объектов с группами и количеством для отображения
+        List<SystemInfo> systemsWithCounts = new ArrayList<>();
+        
+        // Добавляем только группы из базы данных
+        for (Group group : allGroups) {
+            // Считаем количество заглушек из группы, которые есть в базе
+            int count = (int) group.getSystemNames().stream()
+                .filter(configsByName::containsKey)
+                .count();
+            if (count > 0) {
+                systemsWithCounts.add(new SystemInfo(group.getName(), count, false));
             }
         }
         
-        // Сортируем неправильные заглушки по алфавиту
-        invalidConfigs.sort((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()));
+        // Сортируем группы по имени
+        systemsWithCounts.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
         
-        // Сортируем заглушки внутри каждой системы по алфавиту
-        for (List<StoredConfig> configs : groupedBySystem.values()) {
-            configs.sort((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()));
-        }
-        
-        // Сортируем системы по алфавиту
-        List<String> systems = new ArrayList<>(groupedBySystem.keySet());
-        systems.sort(String::compareToIgnoreCase);
-        
-        // Создаем список объектов с системой и количеством для удобного отображения
-        List<SystemInfo> systemsWithCounts = new ArrayList<>();
-        for (String sys : systems) {
-            systemsWithCounts.add(new SystemInfo(sys, groupedBySystem.get(sys).size(), false));
-        }
-        
-        // Добавляем "Заглушки" (неправильные) в список, если они есть
-        if (!invalidConfigs.isEmpty()) {
-            systemsWithCounts.add(new SystemInfo("Заглушки", invalidConfigs.size(), true));
-        }
-        
-        // Если указана система, фильтруем
+        // Если указана система (группа), фильтруем
         if (system != null && !system.isEmpty()) {
-            if ("Заглушки".equals(system)) {
-                // Показываем неправильные заглушки
-                model.addAttribute("configs", invalidConfigs);
-                model.addAttribute("currentSystem", "Заглушки");
-            } else {
-                List<StoredConfig> filteredConfigs = groupedBySystem.getOrDefault(system, new ArrayList<>());
+            // Ищем группу с таким именем
+            Group selectedGroup = allGroups.stream()
+                .filter(g -> g.getName().equalsIgnoreCase(system))
+                .findFirst()
+                .orElse(null);
+            
+            if (selectedGroup != null) {
+                // Показываем заглушки из выбранной группы
+                List<StoredConfig> filteredConfigs = new ArrayList<>();
+                for (String systemName : selectedGroup.getSystemNames()) {
+                    StoredConfig config = configsByName.get(systemName);
+                    if (config != null) {
+                        filteredConfigs.add(config);
+                    }
+                }
+                filteredConfigs.sort((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()));
                 model.addAttribute("configs", filteredConfigs);
+                model.addAttribute("currentSystem", selectedGroup.getName());
+            } else {
+                // Группа не найдена
+                model.addAttribute("configs", new ArrayList<>());
                 model.addAttribute("currentSystem", system);
             }
         } else {
-            // Показываем первую систему по умолчанию
-            if (!systems.isEmpty()) {
-                String firstSystem = systems.get(0);
-                model.addAttribute("configs", groupedBySystem.get(firstSystem));
-                model.addAttribute("currentSystem", firstSystem);
-            } else if (!invalidConfigs.isEmpty()) {
-                // Если нет правильных систем, но есть неправильные - показываем их
-                model.addAttribute("configs", invalidConfigs);
-                model.addAttribute("currentSystem", "Заглушки");
+            // Показываем первую группу по умолчанию
+            if (!systemsWithCounts.isEmpty()) {
+                String firstGroupName = systemsWithCounts.get(0).getName();
+                Group firstGroup = allGroups.stream()
+                    .filter(g -> g.getName().equals(firstGroupName))
+                    .findFirst()
+                    .orElse(null);
+                
+                if (firstGroup != null) {
+                    List<StoredConfig> configsToShow = new ArrayList<>();
+                    for (String systemName : firstGroup.getSystemNames()) {
+                        StoredConfig config = configsByName.get(systemName);
+                        if (config != null) {
+                            configsToShow.add(config);
+                        }
+                    }
+                    configsToShow.sort((a, b) -> a.getSystemName().compareToIgnoreCase(b.getSystemName()));
+                    model.addAttribute("configs", configsToShow);
+                    model.addAttribute("currentSystem", firstGroup.getName());
+                } else {
+                    model.addAttribute("configs", new ArrayList<>());
+                    model.addAttribute("currentSystem", null);
+                }
             } else {
+                // Нет групп
                 model.addAttribute("configs", new ArrayList<>());
                 model.addAttribute("currentSystem", null);
             }
