@@ -5,7 +5,6 @@ import com.mockcontroller.model.StoredConfig;
 import com.mockcontroller.service.ConfigService;
 import com.mockcontroller.service.GroupService;
 import com.mockcontroller.service.MockStatusService;
-import com.mockcontroller.util.SystemNameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -64,72 +63,41 @@ public class StatusPageController {
         Collection<Group> groups = groupService.findAll();
         model.addAttribute("currentGroup", groupId);
         
-        // Получаем все зарегистрированные системы из конфигов
-        Set<String> allRegisteredSystems = getAllRegisteredSystems();
-        
-        // Находим реальные имена конфигов для каждой системы
+        // Получаем все реальные заглушки из конфигов
         Collection<StoredConfig> allConfigs = configService.findAll();
-        Map<String, List<String>> systemToConfigNames = new HashMap<>();
+        Map<String, StoredConfig> configsByName = new HashMap<>();
         for (StoredConfig config : allConfigs) {
-            String configSystemName = config.getSystemName();
-            String extractedSystem;
-            if (SystemNameUtils.isValidTemplate(configSystemName)) {
-                extractedSystem = SystemNameUtils.extractSystemPrefix(configSystemName);
-            } else {
-                extractedSystem = configSystemName;
-            }
-            systemToConfigNames.computeIfAbsent(extractedSystem, k -> new ArrayList<>()).add(configSystemName);
+            configsByName.put(config.getSystemName(), config);
         }
         
-        // Создаем карту для быстрого поиска статусов по systemName
+        // Создаем карту для быстрого поиска статусов по реальному имени заглушки
         Map<String, SystemStatusView> statusMap = new HashMap<>();
         for (MockStatusService.SystemStatus status : allStatuses.values()) {
-            List<String> configNames = systemToConfigNames.getOrDefault(status.getSystemName(), new ArrayList<>());
+            // Используем реальное имя заглушки из статуса
+            String systemName = status.getSystemName();
             SystemStatusView view = new SystemStatusView(
-                status.getSystemName(),
+                systemName,
                 status.getOnlineCount(),
                 status.getOfflineCount(),
                 status.getTotalCount(),
                 status.getLastHealthcheckTime(),
                 formatTime(status.getLastHealthcheckTime()),
                 status.isAnyOnline(),
-                configNames
+                Arrays.asList(systemName) // Реальное имя конфига
             );
-            statusMap.put(status.getSystemName(), view);
+            statusMap.put(systemName, view);
         }
         
-        // Добавляем системы с 0 подов (которые зарегистрированы, но не имеют инстансов)
-        for (String systemName : allRegisteredSystems) {
-            if (!statusMap.containsKey(systemName)) {
-                List<String> configNames = systemToConfigNames.getOrDefault(systemName, new ArrayList<>());
-                SystemStatusView view = new SystemStatusView(
-                    systemName,
-                    0,  // onlineCount
-                    0,  // offlineCount
-                    0,  // totalCount
-                    null,  // lastHealthcheckTime
-                    "Никогда",  // formattedTime
-                    false,  // isAnyOnline
-                    configNames  // реальные имена конфигов
-                );
-                statusMap.put(systemName, view);
-            } else {
-                // Обновляем существующий статус, добавляя реальные имена конфигов
-                SystemStatusView existing = statusMap.get(systemName);
-                List<String> configNames = systemToConfigNames.getOrDefault(systemName, new ArrayList<>());
-                if (!configNames.isEmpty()) {
-                    SystemStatusView updated = new SystemStatusView(
-                        existing.getSystemName(),
-                        existing.getOnlineCount(),
-                        existing.getOfflineCount(),
-                        existing.getTotalCount(),
-                        existing.getLastHealthcheckTime(),
-                        existing.getFormattedTime(),
-                        existing.isAnyOnline(),
-                        configNames
-                    );
-                    statusMap.put(systemName, updated);
-                }
+        // Добавляем заглушки с 0 подов, которые есть в группах
+        // Используем только реальные имена заглушек, не префиксы
+        Set<String> allGroupSystemNames = groups.stream()
+            .flatMap(g -> g.getSystemNames().stream())
+            .collect(Collectors.toSet());
+        
+        for (String systemName : configsByName.keySet()) {
+            if (!statusMap.containsKey(systemName) && allGroupSystemNames.contains(systemName)) {
+                // Показываем заглушку с 0 подов только если она в группе
+                statusMap.put(systemName, createZeroPodsStatusView(systemName));
             }
         }
         
@@ -150,20 +118,9 @@ public class StatusPageController {
                     totalOnline += status.getOnlineCount();
                     totalOffline += status.getOfflineCount();
                     totalInstances += status.getTotalCount();
-                } else if (allRegisteredSystems.contains(systemName)) {
-                    // Система зарегистрирована, но не имеет инстансов (0 подов)
-                    List<String> configNames = systemToConfigNames.getOrDefault(systemName, new ArrayList<>());
-                    SystemStatusView view = new SystemStatusView(
-                        systemName,
-                        0,  // onlineCount
-                        0,  // offlineCount
-                        0,  // totalCount
-                        null,  // lastHealthcheckTime
-                        "Никогда",  // formattedTime
-                        false,  // isAnyOnline
-                        configNames
-                    );
-                    groupSystems.add(view);
+                } else if (configsByName.containsKey(systemName)) {
+                    // Заглушка зарегистрирована в конфигах, но не имеет инстансов (0 подов)
+                    groupSystems.add(createZeroPodsStatusView(systemName));
                     // totalOnline, totalOffline, totalInstances остаются 0
                 }
             }
@@ -185,6 +142,8 @@ public class StatusPageController {
         }
         
         // Добавляем системы без группы в отдельную группу "Без группы"
+        // Показываем только заглушки с healthcheck (у которых есть инстансы), 
+        // не показываем заглушки с 0 подов
         Set<String> groupedSystems = groups.stream()
             .flatMap(g -> g.getSystemNames().stream())
             .collect(Collectors.toSet());
@@ -195,7 +154,10 @@ public class StatusPageController {
         int ungroupedInstances = 0;
         
         for (SystemStatusView status : statusMap.values()) {
-            if (!groupedSystems.contains(status.getSystemName())) {
+            // Показываем в "Без группы" только заглушки, которые:
+            // 1. Не в группах
+            // 2. Имеют хотя бы один инстанс (totalCount > 0) - то есть реально работают
+            if (!groupedSystems.contains(status.getSystemName()) && status.getTotalCount() > 0) {
                 ungroupedSystems.add(status);
                 ungroupedOnline += status.getOnlineCount();
                 ungroupedOffline += status.getOfflineCount();
@@ -276,6 +238,22 @@ public class StatusPageController {
         return "status-detail";
     }
 
+    /**
+     * Создает SystemStatusView для заглушки с нулевым количеством подов
+     */
+    private SystemStatusView createZeroPodsStatusView(String systemName) {
+        return new SystemStatusView(
+            systemName,
+            0,  // onlineCount
+            0,  // offlineCount
+            0,  // totalCount
+            null,  // lastHealthcheckTime
+            "Никогда",  // formattedTime
+            false,  // isAnyOnline
+            Arrays.asList(systemName)
+        );
+    }
+    
     private String formatTime(Instant time) {
         if (time == null) {
             return "Никогда";
@@ -294,26 +272,6 @@ public class StatusPageController {
         }
     }
     
-    /**
-     * Получает все зарегистрированные системы из конфигов.
-     * Извлекает префикс системы для заглушек в формате "system-name-emulation-mock".
-     */
-    private Set<String> getAllRegisteredSystems() {
-        Collection<StoredConfig> configs = configService.findAll();
-        Set<String> systems = new HashSet<>();
-        
-        for (StoredConfig config : configs) {
-            String systemName = config.getSystemName();
-            if (SystemNameUtils.isValidTemplate(systemName)) {
-                String systemPrefix = SystemNameUtils.extractSystemPrefix(systemName);
-                systems.add(systemPrefix);
-            } else {
-                systems.add(systemName);
-            }
-        }
-        
-        return systems;
-    }
     
 
     public static class SystemStatusView {
